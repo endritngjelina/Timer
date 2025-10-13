@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.4/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const PomodoroApp = () => {
+            const [timeLeft, setTimeLeft] = useState(25 * 60);
+            const [isActive, setIsActive] = useState(false);
+            const [mode, setMode] = useState('work');
+            const [tasks, setTasks] = useState([]);
+            const [currentTask, setCurrentTask] = useState('');
+            const [newTask, setNewTask] = useState('');
+            const [completedPomodoros, setCompletedPomodoros] = useState(0);
+            const [settings, setSettings] = useState({
+                workTime: 25,
+                shortBreak: 5,
+                longBreak: 15,
+                autoStartBreaks: false,
+                autoStartPomodoros: false
+            });
+            const [showSettings, setShowSettings] = useState(false);
+            const [showStats, setShowStats] = useState(false);
+            const [sessions, setSessions] = useState([]);
+            
+            const intervalRef = useRef(null);
+
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            const getTimerDuration = (currentMode) => {
+                switch (currentMode) {
+                    case 'work': return settings.workTime * 60;
+                    case 'shortBreak': return settings.shortBreak * 60;
+                    case 'longBreak': return settings.longBreak * 60;
+                    default: return settings.workTime * 60;
+                }
+            };
+
+            const switchMode = (newMode) => {
+                setMode(newMode);
+                setTimeLeft(getTimerDuration(newMode));
+                setIsActive(false);
+            };
+
+            const startTimer = () => setIsActive(true);
+            const pauseTimer = () => setIsActive(false);
+            const resetTimer = () => {
+                setIsActive(false);
+                setTimeLeft(getTimerDuration(mode));
+            };
+
+            const addTask = () => {
+                if (newTask.trim()) {
+                    setTasks([...tasks, { 
+                        id: Date.now(), 
+                        text: newTask.trim(), 
+                        completed: false,
+                        pomodoros: 0
+                    }]);
+                    setNewTask('');
+                }
+            };
+
+            const deleteTask = (id) => {
+                setTasks(tasks.filter(task => task.id !== id));
+                if (currentTask === id) setCurrentTask('');
+            };
+
+            const toggleTask = (id) => {
+                setTasks(tasks.map(task => 
+                    task.id === id ? { ...task, completed: !task.completed } : task
+                ));
+            };
+
+            const completePomodoro = () => {
+                const newSession = {
+                    id: Date.now(),
+                    mode: mode,
+                    task: currentTask ? tasks.find(t => t.id === parseInt(currentTask))?.text : 'No task selected',
+                    completedAt: new Date().toISOString(),
+                    duration: getTimerDuration(mode)
+                };
+                
+                setSessions([...sessions, newSession]);
+                
+                if (mode === 'work') {
+                    setCompletedPomodoros(prev => prev + 1);
+                    
+                    if (currentTask) {
+                        setTasks(tasks.map(task => 
+                            task.id === parseInt(currentTask) 
+                                ? { ...task, pomodoros: task.pomodoros + 1 }
+                                : task
+                        ));
+                    }
+                    
+                    const nextMode = (completedPomodoros + 1) % 4 === 0 ? 'longBreak' : 'shortBreak';
+                    switchMode(nextMode);
+                    
+                    if (settings.autoStartBreaks) {
+                        setTimeout(() => setIsActive(true), 1000);
+                    }
+                } else {
+                    switchMode('work');
+                    
+                    if (settings.autoStartPomodoros) {
+                        setTimeout(() => setIsActive(true), 1000);
+                    }
+                }
+            };
+
+            useEffect(() => {
+                if (isActive && timeLeft > 0) {
+                    intervalRef.current = setInterval(() => {
+                        setTimeLeft(timeLeft => timeLeft - 1);
+                    }, 1000);
+                } else if (timeLeft === 0) {
+                    completePomodoro();
+                } else {
+                    clearInterval(intervalRef.current);
+                }
+
+                return () => clearInterval(intervalRef.current);
+            }, [isActive, timeLeft]);
+
+            const progress = ((getTimerDuration(mode) - timeLeft) / getTimerDuration(mode)) * 100;
+
+            const modeColors = {
+                work: 'bg-red-500',
+                shortBreak: 'bg-green-500',
+                longBreak: 'bg-blue-500'
+            };
+
+            const modeNames = {
+                work: 'Work',
+                shortBreak: 'Short Break',
+                longBreak: 'Long Break'
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-900 text-white p-4">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl font-bold mb-2">Pomodoro Timer</h1>
+                            <p className="text-gray-400">Focus • Work • Achieve</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="lg:col-span-2">
+                                <div className="bg-gray-800 rounded-lg p-8 text-center">
+                                    <div className="flex justify-center mb-6">
+                                        <div className="bg-gray-700 rounded-lg p-1 flex">
+                                            {Object.entries(modeNames).map(([key, name]) => (
+                                                <button
+                                                    key={key}
+                                                    onClick={() => switchMode(key)}
+                                                    className={`px-4 py-2 rounded-md transition-colors ${
+                                                        mode === key ? modeColors[key] + ' text-white' : 'text-gray-300 hover:text-white'
+                                                    }`}
+                                                >
+                                                    {name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="relative w-64 h-64 mx-auto mb-8">
+                                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                            <circle cx="50" cy="50" r="45" stroke="rgb(55, 65, 81)" strokeWidth="8" fill="none" />
+                                            <circle
+                                                cx="50" cy="50" r="45"
+                                                stroke="currentColor" strokeWidth="8" fill="none"
+                                                strokeDasharray={`${2 * Math.PI * 45}`}
+                                                strokeDashoffset={`${2 * Math.PI * 45 * (1 - progress / 100)}`}
+                                                className={`transition-all duration-1000 ${
+                                                    mode === 'work' ? 'text-red-500' : 
+                                                    mode === 'shortBreak' ? 'text-green-500' : 'text-blue-500'
+                                                }`}
+                                                strokeLinecap="round"
+                                            />
+                                        </svg>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="text-center">
+                                                <div className="text-5xl font-mono font-bold">{formatTime(timeLeft)}</div>
+                                                <div className="text-sm text-gray-400 mt-2">{modeNames[mode]}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-center gap-4 mb-6">
+                                        <button
+                                            onClick={isActive ? pauseTimer : startTimer}
+                                            className={`px-8 py-3 rounded-lg font-semibold transition-colors flex items-center ${
+                                                mode === 'work' ? 'bg-red-500 hover:bg-red-600' : 
+                                                mode === 'shortBreak' ? 'bg-green-500 hover:bg-green-600' : 
+                                                'bg-blue-500 hover:bg-blue-600'
+                                            }`}
+                                        >
+                                            <span>{isActive ? '⏸️' : '▶️'}</span>
+                                            <span className="ml-2">{isActive ? 'Pause' : 'Start'}</span>
+                                        </button>
+                                        <button
+                                            onClick={resetTimer}
+                                            className="px-4 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg transition-colors"
+                                        >
+                                            🔄
+                                        </button>
+                                    </div>
+
+                                    {currentTask && (
+                                        <div className="bg-gray-700 rounded-lg p-4">
+                                            <p className="text-sm text-gray-400 mb-1">Current Task:</p>
+                                            <p className="font-semibold">{tasks.find(t => t.id === parseInt(currentTask))?.text}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="bg-gray-800 rounded-lg p-6 mt-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-xl font-semibold">Today's Progress</h3>
+                                        <button
+                                            onClick={() => setShowStats(!showStats)}
+                                            className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+                                        >
+                                            📊
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="text-center">
+                                            <div className="text-2xl font-bold text-red-500">{completedPomodoros}</div>
+                                            <div className="text-sm text-gray-400">Completed Pomodoros</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-2xl font-bold text-green-500">{sessions.length}</div>
+                                            <div className="text-sm text-gray-400">Total Sessions</div>
+                                        </div>
+                                    </div>
+
+                                    {showStats && (
+                                        <div className="mt-4 pt-4 border-t border-gray-700">
+                                            <h4 className="font-semibold mb-2">Recent Sessions</h4>
+                                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                                                {sessions.slice(-5).reverse().map(session => (
+                                                    <div key={session.id} className="flex justify-between text-sm">
+                                                        <span>{session.task}</span>
+                                                        <span className="text-gray-400">
+                                                            {new Date(session.completedAt).toLocaleTimeString()}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="bg-gray-800 rounded-lg p-6">
+                                    <h3 className="text-xl font-semibold mb-4">Tasks</h3>
+                                    <div className="flex gap-2 mb-4">
+                                        <input
+                                            type="text"
+                                            value={newTask}
+                                            onChange={(e) => setNewTask(e.target.value)}
+                                            onKeyPress={(e) => e.key === 'Enter' && addTask()}
+                                            placeholder="Add a new task..."
+                                            className="flex-1 px-3 py-2 bg-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <button
+                                            onClick={addTask}
+                                            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
+                                        >
+                                            ➕
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                                        {tasks.map(task => (
+                                            <div
+                                                key={task.id}
+                                                className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                                                    task.completed ? 'bg-gray-700/50' : 'bg-gray-700'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="currentTask"
+                                                    checked={currentTask === task.id.toString()}
+                                                    onChange={() => setCurrentTask(task.id.toString())}
+                                                    className="text-blue-500"
+                                                />
+                                                <button
+                                                    onClick={() => toggleTask(task.id)}
+                                                    className={`flex-shrink-0 ${task.completed ? 'text-green-500' : 'text-gray-400'}`}
+                                                >
+                                                    ✓
+                                                </button>
+                                                <div className="flex-1">
+                                                    <p className={`${task.completed ? 'line-through text-gray-400' : ''}`}>
+                                                        {task.text}
+                                                    </p>
+                                                    {task.pomodoros > 0 && (
+                                                        <p className="text-xs text-gray-400">{task.pomodoros} pomodoros</p>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={() => deleteTask(task.id)}
+                                                    className="text-red-400 hover:text-red-300 transition-colors"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-800 rounded-lg p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-xl font-semibold">Settings</h3>
+                                        <button
+                                            onClick={() => setShowSettings(!showSettings)}
+                                            className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+                                        >
+                                            ⚙️
+                                        </button>
+                                    </div>
+
+                                    {showSettings && (
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">Work Time (minutes)</label>
+                                                <input
+                                                    type="number"
+                                                    value={settings.workTime}
+                                                    onChange={(e) => setSettings({...settings, workTime: parseInt(e.target.value)})}
+                                                    className="w-full px-3 py-2 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    min="1"
+                                                    max="60"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">Short Break (minutes)</label>
+                                                <input
+                                                    type="number"
+                                                    value={settings.shortBreak}
+                                                    onChange={(e) => setSettings({...settings, shortBreak: parseInt(e.target.value)})}
+                                                    className="w-full px-3 py-2 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    min="1"
+                                                    max="30"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">Long Break (minutes)</label>
+                                                <input
+                                                    type="number"
+                                                    value={settings.longBreak}
+                                                    onChange={(e) => setSettings({...settings, longBreak: parseInt(e.target.value)})}
+                                                    className="w-full px-3 py-2 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    min="1"
+                                                    max="60"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="flex items-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={settings.autoStartBreaks}
+                                                        onChange={(e) => setSettings({...settings, autoStartBreaks: e.target.checked})}
+                                                        className="mr-2"
+                                                    />
+                                                    Auto-start breaks
+                                                </label>
+                                                <label className="flex items-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={settings.autoStartPomodoros}
+                                                        onChange={(e) => setSettings({...settings, autoStartPomodoros: e.target.checked})}
+                                                        className="mr-2"
+                                                    />
+                                                    Auto-start pomodoros
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<PomodoroApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
