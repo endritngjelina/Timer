@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forest Focus - Pomodoro Timer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+            z-index: 10;
+        }
+
+        .timer-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 20px 0 0 20px;
+            margin: 2rem 0 2rem 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .tasks-section {
+            flex: 1;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 0 20px 20px 0;
+            margin: 2rem 2rem 2rem 0;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .timer-display {
+            position: relative;
+            margin-bottom: 3rem;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+        }
+
+        .progress-ring-circle {
+            stroke-dasharray: 628;
+            stroke-dashoffset: 628;
+            transition: stroke-dashoffset 1s ease-in-out;
+            stroke-linecap: round;
+        }
+
+        .timer-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .mode-indicator {
+            font-size: 1.5rem;
+            color: white;
+            margin-bottom: 2rem;
+            text-align: center;
+            opacity: 0.9;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        .btn-tertiary {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+        }
+
+        .settings {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .setting-group label {
+            color: white;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .setting-group input {
+            width: 60px;
+            padding: 8px;
+            border: none;
+            border-radius: 10px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .setting-group input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .tasks-header {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .task-input-container {
+            display: flex;
+            margin-bottom: 2rem;
+            gap: 1rem;
+        }
+
+        .task-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .task-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .task-filters {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .filter-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .task-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .task-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .task-item.completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+
+        .task-checkbox {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+
+        .task-text {
+            flex: 1;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .task-delete {
+            background: rgba(255, 107, 107, 0.3);
+            border: none;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .task-delete:hover {
+            background: rgba(255, 107, 107, 0.6);
+            transform: scale(1.1);
+        }
+
+        .work-mode {
+            --primary-color: #ff6b6b;
+            --secondary-color: #ee5a24;
+        }
+
+        .break-mode {
+            --primary-color: #4CAF50;
+            --secondary-color: #45a049;
+        }
+
+        .progress-ring-circle.work {
+            stroke: #ff6b6b;
+        }
+
+        .progress-ring-circle.break {
+            stroke: #4CAF50;
+        }
+
+        #threejs-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .floating-leaves {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            background: #4CAF50;
+            border-radius: 0 100% 0 100%;
+            z-index: 5;
+            animation: float 6s infinite ease-in-out;
+            opacity: 0.7;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.7;
+            }
+            90% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .timer-section, .tasks-section {
+                border-radius: 20px;
+                margin: 1rem;
+            }
+            
+            .timer-text {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="threejs-container"></div>
+    
+    <div class="container">
+        <div class="timer-section">
+            <div class="mode-indicator" id="modeIndicator">🍅 Work Session</div>
+            
+            <div class="timer-display">
+                <svg class="progress-ring" width="200" height="200">
+                    <circle
+                        class="progress-ring-circle work"
+                        id="progressCircle"
+                        stroke-width="8"
+                        fill="transparent"
+                        r="96"
+                        cx="100"
+                        cy="100"
+                    />
+                </svg>
+                <div class="timer-text" id="timerText">25:00</div>
+            </div>
+
+            <div class="settings">
+                <div class="setting-group">
+                    <label>Work (min)</label>
+                    <input type="number" id="workDuration" value="25" min="1" max="60">
+                </div>
+                <div class="setting-group">
+                    <label>Break (min)</label>
+                    <input type="number" id="breakDuration" value="5" min="1" max="30">
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-primary" id="startBtn">Start</button>
+                <button class="btn btn-secondary" id="pauseBtn">Pause</button>
+                <button class="btn btn-tertiary" id="resetBtn">Reset</button>
+            </div>
+
+            <div style="color: white; text-align: center; margin-top: 1rem;">
+                <div>Completed Pomodoros: <span id="pomodoroCount">0</span></div>
+            </div>
+        </div>
+
+        <div class="tasks-section">
+            <h2 class="tasks-header">🌳 Task Forest</h2>
+            
+            <div class="task-input-container">
+                <input type="text" class="task-input" id="taskInput" placeholder="Plant a new task...">
+                <button class="btn btn-primary" id="addTaskBtn">Add</button>
+            </div>
+
+            <div class="task-filters">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="active">Active</button>
+                <button class="filter-btn" data-filter="completed">Completed</button>
+            </div>
+
+            <div class="task-list" id="taskList"></div>
+        </div>
+    </div>
+
+    <script>
+        class PomodoroTimer {
+            constructor() {
+                this.isRunning = false;
+                this.isPaused = false;
+                this.isWorkSession = true;
+                this.timeLeft = 25 * 60; // 25 minutes in seconds
+                this.workDuration = 25 * 60;
+                this.breakDuration = 5 * 60;
+                this.pomodoroCount = 0;
+                this.tasks = [];
+                this.currentFilter = 'all';
+                this.interval = null;
+                this.storageAvailable = this.checkStorageAvailability();
+
+                this.loadFromStorage();
+                this.init();
+                this.initThreeJS();
+                this.createFloatingLeaves();
+            }
+
+            checkStorageAvailability() {
+                try {
+                    const test = 'storageTest';
+                    localStorage.setItem(test, test);
+                    localStorage.removeItem(test);
+                    return true;
+                } catch (e) {
+                    console.warn('localStorage not available - data will not persist between sessions');
+                    return false;
+                }
+            }
+
+            loadFromStorage() {
+                if (!this.storageAvailable) return;
+
+                try {
+                    // Load tasks
+                    const savedTasks = localStorage.getItem('pomodoroTasks');
+                    if (savedTasks) {
+                        this.tasks = JSON.parse(savedTasks);
+                    }
+
+                    // Load settings
+                    const savedSettings = localStorage.getItem('pomodoroSettings');
+                    if (savedSettings) {
+                        const settings = JSON.parse(savedSettings);
+                        this.workDuration = settings.workDuration || 25 * 60;
+                        this.breakDuration = settings.breakDuration || 5 * 60;
+                        this.pomodoroCount = settings.pomodoroCount || 0;
+                        
+                        // Update UI elements
+                        document.getElementById('workDuration').value = this.workDuration / 60;
+                        document.getElementById('breakDuration').value = this.breakDuration / 60;
+                    }
+
+                    // Load timer state
+                    const savedTimerState = localStorage.getItem('pomodoroTimerState');
+                    if (savedTimerState) {
+                        const timerState = JSON.parse(savedTimerState);
+                        this.isWorkSession = timerState.isWorkSession !== undefined ? timerState.isWorkSession : true;
+                        this.timeLeft = timerState.timeLeft || (this.isWorkSession ? this.workDuration : this.breakDuration);
+                    } else {
+                        this.timeLeft = this.isWorkSession ? this.workDuration : this.breakDuration;
+                    }
+                } catch (e) {
+                    console.error('Error loading from storage:', e);
+                }
+            }
+
+            saveToStorage() {
+                if (!this.storageAvailable) return;
+
+                try {
+                    // Save tasks
+                    localStorage.setItem('pomodoroTasks', JSON.stringify(this.tasks));
+
+                    // Save settings
+                    const settings = {
+                        workDuration: this.workDuration,
+                        breakDuration: this.breakDuration,
+                        pomodoroCount: this.pomodoroCount
+                    };
+                    localStorage.setItem('pomodoroSettings', JSON.stringify(settings));
+
+                    // Save timer state
+                    const timerState = {
+                        isWorkSession: this.isWorkSession,
+                        timeLeft: this.timeLeft
+                    };
+                    localStorage.setItem('pomodoroTimerState', JSON.stringify(timerState));
+                } catch (e) {
+                    console.error('Error saving to storage:', e);
+                }
+            }
+
+            init() {
+                this.updateDisplay();
+                this.bindEvents();
+                this.createAlarmSound();
+                this.renderTasks();
+                
+                // Update pomodoro count display
+                document.getElementById('pomodoroCount').textContent = this.pomodoroCount;
+                
+                // Update mode indicator based on loaded state
+                if (this.isWorkSession) {
+                    document.getElementById('modeIndicator').textContent = '🍅 Work Session';
+                    document.getElementById('progressCircle').className = 'progress-ring-circle work';
+                } else {
+                    document.getElementById('modeIndicator').textContent = '🌱 Break Time';
+                    document.getElementById('progressCircle').className = 'progress-ring-circle break';
+                }
+
+                // Auto-save every 10 seconds
+                setInterval(() => this.saveToStorage(), 10000);
+                
+                // Save on page unload
+                window.addEventListener('beforeunload', () => this.saveToStorage());
+            }
+
+            bindEvents() {
+                document.getElementById('startBtn').addEventListener('click', () => this.start());
+                document.getElementById('pauseBtn').addEventListener('click', () => this.pause());
+                document.getElementById('resetBtn').addEventListener('click', () => this.reset());
+                
+                document.getElementById('workDuration').addEventListener('change', (e) => {
+                    this.workDuration = parseInt(e.target.value) * 60;
+                    if (this.isWorkSession && !this.isRunning) {
+                        this.timeLeft = this.workDuration;
+                        this.updateDisplay();
+                    }
+                    this.saveToStorage();
+                });
+
+                document.getElementById('breakDuration').addEventListener('change', (e) => {
+                    this.breakDuration = parseInt(e.target.value) * 60;
+                    if (!this.isWorkSession && !this.isRunning) {
+                        this.timeLeft = this.breakDuration;
+                        this.updateDisplay();
+                    }
+                    this.saveToStorage();
+                });
+
+                document.getElementById('addTaskBtn').addEventListener('click', () => this.addTask());
+                document.getElementById('taskInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addTask();
+                });
+
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.setFilter(e.target.dataset.filter));
+                });
+            }
+
+            createAlarmSound() {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            playAlarm() {
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.1);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 1);
+                
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + 1);
+                
+                // Play multiple beeps
+                setTimeout(() => this.playBeep(), 1200);
+                setTimeout(() => this.playBeep(), 2400);
+            }
+
+            playBeep() {
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.frequency.value = 1000;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + 0.3);
+            }
+
+            start() {
+                if (!this.isRunning) {
+                    this.isRunning = true;
+                    this.isPaused = false;
+                    this.interval = setInterval(() => this.tick(), 1000);
+                    document.getElementById('startBtn').textContent = 'Running...';
+                    document.getElementById('startBtn').disabled = true;
+                }
+            }
+
+            pause() {
+                if (this.isRunning) {
+                    this.isRunning = false;
+                    this.isPaused = true;
+                    clearInterval(this.interval);
+                    document.getElementById('startBtn').textContent = 'Resume';
+                    document.getElementById('startBtn').disabled = false;
+                }
+            }
+
+            reset() {
+                this.isRunning = false;
+                this.isPaused = false;
+                clearInterval(this.interval);
+                this.timeLeft = this.isWorkSession ? this.workDuration : this.breakDuration;
+                this.updateDisplay();
+                document.getElementById('startBtn').textContent = 'Start';
+                document.getElementById('startBtn').disabled = false;
+            }
+
+            tick() {
+                this.timeLeft--;
+                this.updateDisplay();
+
+                if (this.timeLeft <= 0) {
+                    this.sessionComplete();
+                }
+            }
+
+            sessionComplete() {
+                this.playAlarm();
+                
+                if (this.isWorkSession) {
+                    this.pomodoroCount++;
+                    document.getElementById('pomodoroCount').textContent = this.pomodoroCount;
+                    this.isWorkSession = false;
+                    this.timeLeft = this.breakDuration;
+                    document.getElementById('modeIndicator').textContent = '🌱 Break Time';
+                    document.getElementById('progressCircle').className = 'progress-ring-circle break';
+                } else {
+                    this.isWorkSession = true;
+                    this.timeLeft = this.workDuration;
+                    document.getElementById('modeIndicator').textContent = '🍅 Work Session';
+                    document.getElementById('progressCircle').className = 'progress-ring-circle work';
+                }
+
+                this.isRunning = false;
+                document.getElementById('startBtn').textContent = 'Start';
+                document.getElementById('startBtn').disabled = false;
+                this.updateDisplay();
+                this.saveToStorage();
+            }
+
+            updateDisplay() {
+                const minutes = Math.floor(this.timeLeft / 60);
+                const seconds = this.timeLeft % 60;
+                document.getElementById('timerText').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+                // Update progress ring
+                const totalTime = this.isWorkSession ? this.workDuration : this.breakDuration;
+                const progress = (totalTime - this.timeLeft) / totalTime;
+                const offset = 628 - (progress * 628);
+                document.getElementById('progressCircle').style.strokeDashoffset = offset;
+            }
+
+            addTask() {
+                const input = document.getElementById('taskInput');
+                const text = input.value.trim();
+                
+                if (text) {
+                    const task = {
+                        id: Date.now(),
+                        text: text,
+                        completed: false,
+                        createdAt: new Date().toISOString()
+                    };
+                    
+                    this.tasks.push(task);
+                    input.value = '';
+                    this.renderTasks();
+                    this.saveToStorage();
+                }
+            }
+
+            toggleTask(id) {
+                const task = this.tasks.find(t => t.id === id);
+                if (task) {
+                    task.completed = !task.completed;
+                    task.completedAt = task.completed ? new Date().toISOString() : null;
+                    this.renderTasks();
+                    this.saveToStorage();
+                }
+            }
+
+            deleteTask(id) {
+                this.tasks = this.tasks.filter(t => t.id !== id);
+                this.renderTasks();
+                this.saveToStorage();
+            }
+
+            setFilter(filter) {
+                this.currentFilter = filter;
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.filter === filter);
+                });
+                this.renderTasks();
+            }
+
+            getFilteredTasks() {
+                switch (this.currentFilter) {
+                    case 'active':
+                        return this.tasks.filter(t => !t.completed);
+                    case 'completed':
+                        return this.tasks.filter(t => t.completed);
+                    default:
+                        return this.tasks;
+                }
+            }
+
+            renderTasks() {
+                const taskList = document.getElementById('taskList');
+                const filteredTasks = this.getFilteredTasks();
+                
+                taskList.innerHTML = filteredTasks.map(task => `
+                    <div class="task-item ${task.completed ? 'completed' : ''}">
+                        <input type="checkbox" class="task-checkbox" 
+                               ${task.completed ? 'checked' : ''} 
+                               onchange="timer.toggleTask(${task.id})">
+                        <span class="task-text">${task.text}</span>
+                        <button class="task-delete" onclick="timer.deleteTask(${task.id})">×</button>
+                    </div>
+                `).join('');
+            }
+
+            initThreeJS() {
+                const container = document.getElementById('threejs-container');
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({ alpha: true });
+                
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setClearColor(0x000000, 0);
+                container.appendChild(renderer.domElement);
+
+                // Create trees
+                this.createTrees(scene);
+
+                camera.position.z = 5;
+
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    
+                    // Rotate trees slowly
+                    scene.children.forEach((child, index) => {
+                        if (child.geometry) {
+                            child.rotation.y += 0.001 * (index + 1);
+                        }
+                    });
+                    
+                    renderer.render(scene, camera);
+                };
+
+                animate();
+
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+
+            createTrees(scene) {
+                for (let i = 0; i < 15; i++) {
+                    // Tree trunk
+                    const trunkGeometry = new THREE.CylinderGeometry(0.1, 0.15, 1, 8);
+                    const trunkMaterial = new THREE.MeshBasicMaterial({ color: 0x8B4513, transparent: true, opacity: 0.3 });
+                    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+
+                    // Tree foliage
+                    const foliageGeometry = new THREE.SphereGeometry(0.5, 8, 6);
+                    const foliageMaterial = new THREE.MeshBasicMaterial({ color: 0x228B22, transparent: true, opacity: 0.4 });
+                    const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+
+                    foliage.position.y = 0.7;
+                    
+                    const tree = new THREE.Group();
+                    tree.add(trunk);
+                    tree.add(foliage);
+
+                    // Random positioning
+                    tree.position.x = (Math.random() - 0.5) * 20;
+                    tree.position.y = (Math.random() - 0.5) * 10;
+                    tree.position.z = (Math.random() - 0.5) * 10 - 5;
+                    
+                    tree.scale.setScalar(0.5 + Math.random() * 0.5);
+
+                    scene.add(tree);
+                }
+            }
+
+            createFloatingLeaves() {
+                setInterval(() => {
+                    const leaf = document.createElement('div');
+                    leaf.className = 'floating-leaves';
+                    leaf.style.left = Math.random() * 100 + 'vw';
+                    leaf.style.animationDuration = (Math.random() * 3 + 4) + 's';
+                    leaf.style.animationDelay = Math.random() * 2 + 's';
+                    
+                    document.body.appendChild(leaf);
+                    
+                    setTimeout(() => {
+                        leaf.remove();
+                    }, 8000);
+                }, 2000);
+            }
+        }
+
+        // Initialize the timer
+        const timer = new PomodoroTimer();
+    </script>
+</body>
+</html>
