@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forest Pomodoro Timer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a2980 50%, #26d0ce 100%);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #three-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(2px);
+        }
+        
+        .timer-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transform: scale(0.9);
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: scale(0.9) translateY(0px); }
+            50% { transform: scale(0.9) translateY(-10px); }
+        }
+        
+        .timer-display {
+            font-size: 4rem;
+            font-weight: 300;
+            margin: 20px 0;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            letter-spacing: 2px;
+        }
+        
+        .timer-label {
+            font-size: 1.5rem;
+            opacity: 0.8;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .progress-ring {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+        }
+        
+        .progress-ring svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.2);
+            stroke-width: 8;
+        }
+        
+        .progress-ring-progress {
+            fill: none;
+            stroke: #26d0ce;
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 565.48;
+            stroke-dashoffset: 565.48;
+            transition: stroke-dashoffset 1s ease;
+            filter: drop-shadow(0 0 10px #26d0ce);
+        }
+        
+        .controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn.primary {
+            background: linear-gradient(45deg, #26d0ce, #1a2980);
+        }
+        
+        .session-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        
+        .session-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .session-btn.active {
+            background: #26d0ce;
+            box-shadow: 0 0 20px rgba(38, 208, 206, 0.5);
+        }
+        
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: sparkle 3s infinite ease-in-out;
+        }
+        
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+        
+        .notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(45deg, #ff6b6b, #ffa500);
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            opacity: 0;
+            animation: notification-pop 3s ease-in-out;
+            z-index: 20;
+        }
+        
+        @keyframes notification-pop {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+        }
+    </style>
+</head>
+<body>
+    <div id="three-container"></div>
+    <div class="particles" id="particles"></div>
+    
+    <div class="ui-overlay">
+        <div class="timer-container">
+            <div class="session-selector">
+                <button class="session-btn active" data-session="pomodoro">Pomodoro</button>
+                <button class="session-btn" data-session="short">Short Break</button>
+                <button class="session-btn" data-session="long">Long Break</button>
+            </div>
+            
+            <div class="timer-label" id="session-label">Focus Time</div>
+            
+            <div class="progress-ring">
+                <svg>
+                    <circle class="progress-ring-circle" cx="100" cy="100" r="90"></circle>
+                    <circle class="progress-ring-progress" cx="100" cy="100" r="90" id="progress-circle"></circle>
+                </svg>
+            </div>
+            
+            <div class="timer-display" id="timer-display">25:00</div>
+            
+            <div class="controls">
+                <button class="btn primary" id="start-btn">Start</button>
+                <button class="btn" id="pause-btn">Pause</button>
+                <button class="btn" id="reset-btn">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Timer Configuration
+        const TIMER_CONFIGS = {
+            pomodoro: { duration: 25 * 60, label: 'Focus Time' },
+            short: { duration: 5 * 60, label: 'Short Break' },
+            long: { duration: 15 * 60, label: 'Long Break' }
+        };
+
+        // Timer State
+        let currentSession = 'pomodoro';
+        let timeRemaining = TIMER_CONFIGS[currentSession].duration;
+        let totalTime = TIMER_CONFIGS[currentSession].duration;
+        let isRunning = false;
+        let timerInterval = null;
+
+        // Three.js Scene Setup
+        let scene, camera, renderer, trees = [], particles = [];
+        let animationId;
+
+        function initThreeJS() {
+            const container = document.getElementById('three-container');
+            
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x1a2980, 10, 100);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 20);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+            container.appendChild(renderer.domElement);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            scene.add(directionalLight);
+            
+            // Create Trees
+            createForest();
+            
+            // Create Floating Particles
+            createThreeParticles();
+            
+            // Start Animation
+            animate();
+        }
+
+        function createTree(x, z, scale = 1) {
+            const tree = new THREE.Group();
+            
+            // Trunk
+            const trunkGeometry = new THREE.CylinderGeometry(0.3 * scale, 0.5 * scale, 3 * scale, 8);
+            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = 1.5 * scale;
+            tree.add(trunk);
+            
+            // Leaves
+            const leavesGeometry = new THREE.SphereGeometry(2 * scale, 8, 6);
+            const leavesMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+            const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+            leaves.position.y = 4 * scale;
+            leaves.scale.y = 0.8;
+            tree.add(leaves);
+            
+            tree.position.set(x, 0, z);
+            return tree;
+        }
+
+        function createForest() {
+            for (let i = 0; i < 20; i++) {
+                const x = (Math.random() - 0.5) * 60;
+                const z = (Math.random() - 0.5) * 60;
+                const scale = 0.8 + Math.random() * 0.8;
+                const tree = createTree(x, z, scale);
+                trees.push(tree);
+                scene.add(tree);
+            }
+        }
+
+        function createThreeParticles() {
+            const particleGeometry = new THREE.SphereGeometry(0.05, 4, 4);
+            const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+            
+            for (let i = 0; i < 50; i++) {
+                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                particle.position.set(
+                    (Math.random() - 0.5) * 40,
+                    Math.random() * 20,
+                    (Math.random() - 0.5) * 40
+                );
+                particle.userData = {
+                    velocity: new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.02,
+                        (Math.random() - 0.5) * 0.02,
+                        (Math.random() - 0.5) * 0.02
+                    ),
+                    originalOpacity: 0.3 + Math.random() * 0.5
+                };
+                particles.push(particle);
+                scene.add(particle);
+            }
+        }
+
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            
+            // Animate trees (gentle sway)
+            trees.forEach((tree, index) => {
+                tree.rotation.z = Math.sin(Date.now() * 0.001 + index) * 0.02;
+            });
+            
+            // Animate particles
+            particles.forEach(particle => {
+                particle.position.add(particle.userData.velocity);
+                particle.material.opacity = particle.userData.originalOpacity * (0.5 + 0.5 * Math.sin(Date.now() * 0.003));
+                
+                // Reset particle position if it goes too far
+                if (particle.position.length() > 30) {
+                    particle.position.set(
+                        (Math.random() - 0.5) * 40,
+                        Math.random() * 20,
+                        (Math.random() - 0.5) * 40
+                    );
+                }
+            });
+            
+            // Camera movement
+            camera.position.x = Math.sin(Date.now() * 0.0005) * 2;
+            camera.lookAt(0, 5, 0);
+            
+            renderer.render(scene, camera);
+        }
+
+        // Timer Functions
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateDisplay() {
+            document.getElementById('timer-display').textContent = formatTime(timeRemaining);
+            updateProgressRing();
+        }
+
+        function updateProgressRing() {
+            const circle = document.getElementById('progress-circle');
+            const progress = (totalTime - timeRemaining) / totalTime;
+            const offset = 565.48 * (1 - progress);
+            circle.style.strokeDashoffset = offset;
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 3000);
+        }
+
+        function createUIParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 10; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 3 + 's';
+                container.appendChild(particle);
+                
+                setTimeout(() => {
+                    if (container.contains(particle)) {
+                        container.removeChild(particle);
+                    }
+                }, 3000);
+            }
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            document.getElementById('start-btn').textContent = 'Running...';
+            
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                updateDisplay();
+                
+                if (timeRemaining <= 0) {
+                    completeSession();
+                }
+            }, 1000);
+            
+            createUIParticles();
+        }
+
+        function pauseTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            document.getElementById('start-btn').textContent = 'Start';
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            timeRemaining = TIMER_CONFIGS[currentSession].duration;
+            totalTime = timeRemaining;
+            updateDisplay();
+        }
+
+        function completeSession() {
+            pauseTimer();
+            
+            if (currentSession === 'pomodoro') {
+                showNotification('Great work! Time for a break! 🌲');
+            } else {
+                showNotification('Break over! Ready to focus? 🚀');
+            }
+            
+            createUIParticles();
+            setTimeout(createUIParticles, 1000);
+        }
+
+        function switchSession(sessionType) {
+            pauseTimer();
+            currentSession = sessionType;
+            timeRemaining = TIMER_CONFIGS[sessionType].duration;
+            totalTime = timeRemaining;
+            document.getElementById('session-label').textContent = TIMER_CONFIGS[sessionType].label;
+            updateDisplay();
+            
+            // Update active button
+            document.querySelectorAll('.session-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-session="${sessionType}"]`).classList.add('active');
+        }
+
+        // Event Listeners
+        document.getElementById('start-btn').addEventListener('click', startTimer);
+        document.getElementById('pause-btn').addEventListener('click', pauseTimer);
+        document.getElementById('reset-btn').addEventListener('click', resetTimer);
+
+        document.querySelectorAll('.session-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                switchSession(btn.dataset.session);
+            });
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize
+        initThreeJS();
+        updateDisplay();
+        
+        // Create initial particles
+        setTimeout(createUIParticles, 1000);
+    </script>
+</body>
+</html>
