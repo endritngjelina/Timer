@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Pro - Advanced Task Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 95%;
+            max-width: 1200px;
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .timer-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .timer-display {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 48px;
+            font-weight: 700;
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .timer-display:hover {
+            transform: scale(1.02);
+            box-shadow: 0 15px 40px rgba(255, 107, 107, 0.4);
+        }
+
+        .timer-display.break {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            box-shadow: 0 10px 30px rgba(78, 205, 196, 0.3);
+        }
+
+        .timer-display.long-break {
+            background: linear-gradient(135deg, #a8e6cf, #7fcdcd);
+            box-shadow: 0 10px 30px rgba(168, 230, 207, 0.3);
+        }
+
+        .progress-ring {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 260px;
+            height: 260px;
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-circle {
+            stroke: rgba(255, 255, 255, 0.3);
+            stroke-width: 4;
+            fill: transparent;
+            r: 126;
+            cx: 130;
+            cy: 130;
+            stroke-dasharray: 792;
+            stroke-dashoffset: 792;
+            transition: stroke-dashoffset 1s linear;
+        }
+
+        .session-type {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #495057;
+            border: 2px solid #dee2e6;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+        }
+
+        .settings {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .setting-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .setting-group input {
+            width: 60px;
+            padding: 8px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .setting-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .task-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .task-input-container {
+            position: relative;
+        }
+
+        .task-input {
+            width: 100%;
+            padding: 15px 50px 15px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .task-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .add-task-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            width: 35px;
+            height: 35px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+
+        .add-task-btn:hover {
+            background: #5a67d8;
+        }
+
+        .task-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 2px solid #f8f9fa;
+            border-radius: 15px;
+            background: #fafafa;
+        }
+
+        .task-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .task-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-item.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f8f9ff, #e6edff);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
+        }
+
+        .task-item.completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .task-checkbox.checked {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+
+        .task-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .task-title {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .task-stats {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .task-action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-edit:hover, .btn-delete:hover {
+            transform: scale(1.05);
+        }
+
+        .stats-section {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: #28a745;
+        }
+
+        .notification.info {
+            background: #17a2b8;
+        }
+
+        .notification.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+
+            .timer-display {
+                width: 220px;
+                height: 220px;
+                font-size: 36px;
+            }
+
+            .progress-ring {
+                width: 200px;
+                height: 200px;
+            }
+
+            .settings {
+                gap: 15px;
+            }
+
+            .controls {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+
+        .dark-theme {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+        }
+
+        .dark-theme .container {
+            background: rgba(30, 30, 60, 0.95);
+        }
+
+        .dark-theme .task-list {
+            background: rgba(40, 40, 80, 0.5);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .dark-theme .task-item {
+            background: rgba(50, 50, 90, 0.7);
+            color: #e0e0e0;
+        }
+
+        .dark-theme .task-input {
+            background: rgba(50, 50, 90, 0.7);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #e0e0e0;
+        }
+
+        .dark-theme .stat-card {
+            background: rgba(50, 50, 90, 0.7);
+            color: #e0e0e0;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+    
+    <div class="container">
+        <div class="timer-section">
+            <div class="timer-display" id="timerDisplay">
+                <svg class="progress-ring">
+                    <circle class="progress-ring-circle" id="progressCircle"></circle>
+                </svg>
+                <div class="session-type" id="sessionType">Focus Session</div>
+                <div id="timeDisplay">25:00</div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn btn-primary" id="startBtn">Start</button>
+                <button class="btn btn-secondary" id="pauseBtn">Pause</button>
+                <button class="btn btn-secondary" id="resetBtn">Reset</button>
+                <button class="btn btn-secondary" id="skipBtn">Skip</button>
+            </div>
+            
+            <div class="settings">
+                <div class="setting-group">
+                    <label>Focus (min)</label>
+                    <input type="number" id="focusTime" value="25" min="1" max="60">
+                </div>
+                <div class="setting-group">
+                    <label>Short Break (min)</label>
+                    <input type="number" id="shortBreak" value="5" min="1" max="30">
+                </div>
+                <div class="setting-group">
+                    <label>Long Break (min)</label>
+                    <input type="number" id="longBreak" value="15" min="1" max="60">
+                </div>
+                <div class="setting-group">
+                    <label>Sessions to Long Break</label>
+                    <input type="number" id="sessionsToLongBreak" value="4" min="2" max="10">
+                </div>
+            </div>
+        </div>
+        
+        <div class="task-section">
+            <div class="task-header">
+                <h2>Tasks</h2>
+                <button class="btn btn-primary" id="addTaskBtn">+ Add Task</button>
+            </div>
+            
+            <div class="task-input-container">
+                <input type="text" class="task-input" id="taskInput" placeholder="Enter a new task...">
+                <button class="add-task-btn" id="quickAddBtn">+</button>
+            </div>
+            
+            <div class="task-list" id="taskList">
+                <!-- Tasks will be populated here -->
+            </div>
+        </div>
+        
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-number" id="completedSessions">0</div>
+                <div class="stat-label">Sessions Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completedTasks">0</div>
+                <div class="stat-label">Tasks Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalFocusTime">0</div>
+                <div class="stat-label">Total Focus Time (min)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="currentStreak">0</div>
+                <div class="stat-label">Current Streak</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="productivityScore">0</div>
+                <div class="stat-label">Productivity Score</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div class="modal" id="taskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Add New Task</h3>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <form id="taskForm">
+                <div class="form-group">
+                    <label for="taskTitleInput">Task Title</label>
+                    <input type="text" id="taskTitleInput" required>
+                </div>
+                <div class="form-group">
+                    <label for="taskPriorityInput">Priority</label>
+                    <select id="taskPriorityInput">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="estimatedPomodoros">Estimated Pomodoros</label>
+                    <input type="number" id="estimatedPomodoros" value="1" min="1" max="20">
+                </div>
+                <div class="controls">
+                    <button type="submit" class="btn btn-primary" id="saveTaskBtn">Save Task</button>
+                    <button type="button" class="btn btn-secondary" id="cancelTaskBtn">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        class PomodoroTimer {
+            constructor() {
+                this.initializeElements();
+                this.initializeState();
+                this.bindEvents();
+                this.updateDisplay();
+                this.updateStats();
+                this.loadSampleTasks();
+            }
+
+            initializeElements() {
+                // Timer elements
+                this.timerDisplay = document.getElementById('timerDisplay');
+                this.timeDisplay = document.getElementById('timeDisplay');
+                this.sessionType = document.getElementById('sessionType');
+                this.progressCircle = document.getElementById('progressCircle');
+                
+                // Control buttons
+                this.startBtn = document.getElementById('startBtn');
+                this.pauseBtn = document.getElementById('pauseBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.skipBtn = document.getElementById('skipBtn');
+                
+                // Settings
+                this.focusTimeInput = document.getElementById('focusTime');
+                this.shortBreakInput = document.getElementById('shortBreak');
+                this.longBreakInput = document.getElementById('longBreak');
+                this.sessionsToLongBreakInput = document.getElementById('sessionsToLongBreak');
+                
+                // Task elements
+                this.taskInput = document.getElementById('taskInput');
+                this.taskList = document.getElementById('taskList');
+                this.addTaskBtn = document.getElementById('addTaskBtn');
+                this.quickAddBtn = document.getElementById('quickAddBtn');
+                
+                // Modal elements
+                this.taskModal = document.getElementById('taskModal');
+                this.taskForm = document.getElementById('taskForm');
+                this.taskTitleInput = document.getElementById('taskTitleInput');
+                this.taskPriorityInput = document.getElementById('taskPriorityInput');
+                this.estimatedPomodoros = document.getElementById('estimatedPomodoros');
+                this.closeModal = document.getElementById('closeModal');
+                this.saveTaskBtn = document.getElementById('saveTaskBtn');
+                this.cancelTaskBtn = document.getElementById('cancelTaskBtn');
+                this.modalTitle = document.getElementById('modalTitle');
+                
+                // Stats elements
+                this.completedSessionsEl = document.getElementById('completedSessions');
+                this.completedTasksEl = document.getElementById('completedTasks');
+                this.totalFocusTimeEl = document.getElementById('totalFocusTime');
+                this.currentStreakEl = document.getElementById('currentStreak');
+                this.productivityScoreEl = document.getElementById('productivityScore');
+                
+                // Theme toggle
+                this.themeToggle = document.getElementById('themeToggle');
+            }
+
+            initializeState() {
+                this.currentTime = 25 * 60; // 25 minutes in seconds
+                this.initialTime = 25 * 60;
+                this.isRunning = false;
+                this.currentSession = 'focus'; // focus, shortBreak, longBreak
+                this.completedSessions = 0;
+                this.interval = null;
+                this.currentTaskId = null;
+                this.editingTaskId = null;
+                
+                // Task management
+                this.tasks = [];
+                this.taskIdCounter = 1;
+                
+                // Statistics
+                this.stats = {
+                    completedSessions: 0,
+                    completedTasks: 0,
+                    totalFocusTime: 0,
+                    currentStreak: 0,
+                    productivityScore: 0,
+                    sessionsToday: 0,
+                    lastSessionDate: null
+                };
+                
+                // Settings
+                this.settings = {
+                    focusTime: 25,
+                    shortBreak: 5,
+                    longBreak: 15,
+                    sessionsToLongBreak: 4,
+                    darkTheme: false,
+                    notifications: true,
+                    autoStartBreaks: false,
+                    autoStartPomodoros: false
+                };
+            }
+
+            bindEvents() {
+                // Timer controls
+                this.startBtn.addEventListener('click', () => this.startTimer());
+                this.pauseBtn.addEventListener('click', () => this.pauseTimer());
+                this.resetBtn.addEventListener('click', () => this.resetTimer());
+                this.skipBtn.addEventListener('click', () => this.skipSession());
+                
+                // Settings
+                this.focusTimeInput.addEventListener('change', (e) => this.updateSetting('focusTime', parseInt(e.target.value)));
+                this.shortBreakInput.addEventListener('change', (e) => this.updateSetting('shortBreak', parseInt(e.target.value)));
+                this.longBreakInput.addEventListener('change', (e) => this.updateSetting('longBreak', parseInt(e.target.value)));
+                this.sessionsToLongBreakInput.addEventListener('change', (e) => this.updateSetting('sessionsToLongBreak', parseInt(e.target.value)));
+                
+                // Task management
+                this.addTaskBtn.addEventListener('click', () => this.openTaskModal());
+                this.quickAddBtn.addEventListener('click', () => this.quickAddTask());
+                this.taskInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.quickAddTask();
+                });
+                
+                // Modal events
+                this.closeModal.addEventListener('click', () => this.closeTaskModal());
+                this.cancelTaskBtn.addEventListener('click', () => this.closeTaskModal());
+                this.taskForm.addEventListener('submit', (e) => this.handleTaskSubmit(e));
+                
+                // Theme toggle
+                this.themeToggle.addEventListener('click', () => this.toggleTheme());
+                
+                // Timer display click to toggle
+                this.timerDisplay.addEventListener('click', () => {
+                    if (this.isRunning) {
+                        this.pauseTimer();
+                    } else {
+                        this.startTimer();
+                    }
+                });
+            }
+
+            loadSampleTasks() {
+                const sampleTasks = [
+                    { title: "Review project requirements", priority: "high", estimatedPomodoros: 2 },
+                    { title: "Write unit tests", priority: "medium", estimatedPomodoros: 3 },
+                    { title: "Update documentation", priority: "low", estimatedPomodoros: 1 },
+                    { title: "Code review for team", priority: "high", estimatedPomodoros: 2 }
+                ];
+                
+                sampleTasks.forEach(task => {
+                    this.addTask(task.title, task.priority, task.estimatedPomodoros);
+                });
+            }
+
+            startTimer() {
+                if (!this.isRunning) {
+                    this.isRunning = true;
+                    this.startBtn.textContent = 'Running...';
+                    this.startBtn.disabled = true;
+                    this.timerDisplay.classList.add('pulse');
+                    
+                    this.interval = setInterval(() => {
+                        this.currentTime--;
+                        this.updateDisplay();
+                        
+                        if (this.currentTime <= 0) {
+                            this.completeSession();
+                        }
+                    }, 1000);
+                }
+            }
+
+            pauseTimer() {
+                if (this.isRunning) {
+                    this.isRunning = false;
+                    this.startBtn.textContent = 'Start';
+                    this.startBtn.disabled = false;
+                    this.timerDisplay.classList.remove('pulse');
+                    clearInterval(this.interval);
+                }
+            }
+
+            resetTimer() {
+                this.pauseTimer();
+                this.currentTime = this.initialTime;
+                this.updateDisplay();
+            }
+
+            skipSession() {
+                this.pauseTimer();
+                this.completeSession();
+            }
+
+            completeSession() {
+                this.pauseTimer();
+                this.stats.completedSessions++;
+                
+                if (this.currentSession === 'focus') {
+                    this.stats.totalFocusTime += this.settings.focusTime;
+                    this.stats.currentStreak++;
+                    
+                    // Mark current task as having completed a pomodoro
+                    if (this.currentTaskId) {
+                        const task = this.tasks.find(t => t.id === this.currentTaskId);
+                        if (task) {
+                            task.completedPomodoros++;
+                            if (task.completedPomodoros >= task.estimatedPomodoros) {
+                                task.completed = true;
+                                this.stats.completedTasks++;
+                                this.showNotification('Task completed! 🎉', 'success');
+                            }
+                        }
+                    }
+                    
+                    this.showNotification('Focus session completed! Take a break! 🎯', 'success');
+                    this.nextSession();
+                } else {
+                    this.showNotification('Break time over! Ready to focus! 💪', 'info');
+                    this.currentSession = 'focus';
+                }
+                
+                this.updateSessionType();
+                this.updateStats();
+                this.renderTasks();
+                this.playNotificationSound();
+            }
+
+            nextSession() {
+                this.completedSessions++;
+                
+                if (this.completedSessions % this.settings.sessionsToLongBreak === 0) {
+                    this.currentSession = 'longBreak';
+                } else {
+                    this.currentSession = 'shortBreak';
+                }
+            }
+
+            updateSessionType() {
+                const sessionConfig = {
+                    focus: {
+                        time: this.settings.focusTime,
+                        label: 'Focus Session',
+                        class: ''
+                    },
+                    shortBreak: {
+                        time: this.settings.shortBreak,
+                        label: 'Short Break',
+                        class: 'break'
+                    },
+                    longBreak: {
+                        time: this.settings.longBreak,
+                        label: 'Long Break',
+                        class: 'long-break'
+                    }
+                };
+                
+                const config = sessionConfig[this.currentSession];
+                this.currentTime = config.time * 60;
+                this.initialTime = config.time * 60;
+                this.sessionType.textContent = config.label;
+                
+                // Update timer display styling
+                this.timerDisplay.className = `timer-display ${config.class}`;
+                
+                this.updateDisplay();
+            }
+
+            updateDisplay() {
+                const minutes = Math.floor(this.currentTime / 60);
+                const seconds = this.currentTime % 60;
+                this.timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Update progress circle
+                const progress = (this.initialTime - this.currentTime) / this.initialTime;
+                const offset = 792 - (progress * 792);
+                this.progressCircle.style.strokeDashoffset = offset;
+                
+                // Update document title
+                document.title = `${this.timeDisplay.textContent} - ${this.sessionType.textContent} - Pomodoro Pro`;
+            }
+
+            updateSetting(setting, value) {
+                this.settings[setting] = value;
+                if (setting === 'focusTime' && this.currentSession === 'focus') {
+                    this.updateSessionType();
+                }
+            }
+
+            // Task Management Methods
+            openTaskModal(taskId = null) {
+                this.editingTaskId = taskId;
+                
+                if (taskId) {
+                    const task = this.tasks.find(t => t.id === taskId);
+                    this.modalTitle.textContent = 'Edit Task';
+                    this.taskTitleInput.value = task.title;
+                    this.taskPriorityInput.value = task.priority;
+                    this.estimatedPomodoros.value = task.estimatedPomodoros;
+                } else {
+                    this.modalTitle.textContent = 'Add New Task';
+                    this.taskTitleInput.value = '';
+                    this.taskPriorityInput.value = 'medium';
+                    this.estimatedPomodoros.value = 1;
+                }
+                
+                this.taskModal.classList.add('show');
+                this.taskTitleInput.focus();
+            }
+
+            closeTaskModal() {
+                this.taskModal.classList.remove('show');
+                this.editingTaskId = null;
+            }
+
+            handleTaskSubmit(e) {
+                e.preventDefault();
+                
+                const title = this.taskTitleInput.value.trim();
+                const priority = this.taskPriorityInput.value;
+                const estimatedPomodoros = parseInt(this.estimatedPomodoros.value);
+                
+                if (title) {
+                    if (this.editingTaskId) {
+                        this.updateTask(this.editingTaskId, title, priority, estimatedPomodoros);
+                    } else {
+                        this.addTask(title, priority, estimatedPomodoros);
+                    }
+                    this.closeTaskModal();
+                }
+            }
+
+            quickAddTask() {
+                const title = this.taskInput.value.trim();
+                if (title) {
+                    this.addTask(title, 'medium', 1);
+                    this.taskInput.value = '';
+                }
+            }
+
+            addTask(title, priority = 'medium', estimatedPomodoros = 1) {
+                const task = {
+                    id: this.taskIdCounter++,
+                    title,
+                    priority,
+                    estimatedPomodoros,
+                    completedPomodoros: 0,
+                    completed: false,
+                    createdAt: new Date(),
+                    completedAt: null
+                };
+                
+                this.tasks.unshift(task);
+                this.renderTasks();
+                this.showNotification('Task added successfully! 📝', 'success');
+            }
+
+            updateTask(taskId, title, priority, estimatedPomodoros) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.title = title;
+                    task.priority = priority;
+                    task.estimatedPomodoros = estimatedPomodoros;
+                    this.renderTasks();
+                    this.showNotification('Task updated successfully! ✏️', 'success');
+                }
+            }
+
+            deleteTask(taskId) {
+                if (confirm('Are you sure you want to delete this task?')) {
+                    this.tasks = this.tasks.filter(t => t.id !== taskId);
+                    if (this.currentTaskId === taskId) {
+                        this.currentTaskId = null;
+                    }
+                    this.renderTasks();
+                    this.showNotification('Task deleted! 🗑️', 'warning');
+                }
+            }
+
+            toggleTaskComplete(taskId) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.completed = !task.completed;
+                    task.completedAt = task.completed ? new Date() : null;
+                    
+                    if (task.completed) {
+                        this.stats.completedTasks++;
+                        this.showNotification('Task completed! Great job! 🎉', 'success');
+                    } else {
+                        this.stats.completedTasks--;
+                    }
+                    
+                    this.renderTasks();
+                    this.updateStats();
+                }
+            }
+
+            setActiveTask(taskId) {
+                this.currentTaskId = taskId;
+                this.renderTasks();
+                const task = this.tasks.find(t => t.id === taskId);
+                this.showNotification(`Now working on: ${task.title} 🎯`, 'info');
+            }
+
+            renderTasks() {
+                this.taskList.innerHTML = '';
+                
+                if (this.tasks.length === 0) {
+                    this.taskList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No tasks yet. Add your first task above!</p>';
+                    return;
+                }
+                
+                // Sort tasks: active first, then by priority, then by creation date
+                const sortedTasks = [...this.tasks].sort((a, b) => {
+                    if (a.id === this.currentTaskId) return -1;
+                    if (b.id === this.currentTaskId) return 1;
+                    
+                    const priorityOrder = { high: 3, medium: 2, low: 1 };
+                    if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+                        return priorityOrder[b.priority] - priorityOrder[a.priority];
+                    }
+                    
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                });
+                
+                sortedTasks.forEach(task => {
+                    const taskElement = this.createTaskElement(task);
+                    this.taskList.appendChild(taskElement);
+                });
+            }
+
+            createTaskElement(task) {
+                const taskDiv = document.createElement('div');
+                taskDiv.className = `task-item ${task.id === this.currentTaskId ? 'active' : ''} ${task.completed ? 'completed' : ''}`;
+                
+                const priorityColors = {
+                    high: '#ff6b6b',
+                    medium: '#ffd93d',
+                    low: '#6bcf7f'
+                };
+                
+                const progress = task.estimatedPomodoros > 0 ? (task.completedPomodoros / task.estimatedPomodoros) * 100 : 0;
+                
+                taskDiv.innerHTML = `
+                    <div class="task-checkbox ${task.completed ? 'checked' : ''}" onclick="timer.toggleTaskComplete(${task.id})">
+                        ${task.completed ? '✓' : ''}
+                    </div>
+                    <div class="task-content">
+                        <div class="task-title">${task.title}</div>
+                        <div class="task-stats">
+                            <span style="color: ${priorityColors[task.priority]}">● ${task.priority.toUpperCase()}</span>
+                            | ${task.completedPomodoros}/${task.estimatedPomodoros} pomodoros
+                            | ${Math.round(progress)}% complete
+                        </div>
+                        <div style="width: 100%; height: 4px; background: #e9ecef; border-radius: 2px; margin-top: 5px;">
+                            <div style="width: ${progress}%; height: 100%; background: ${priorityColors[task.priority]}; border-radius: 2px; transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+                    <div class="task-actions">
+                        ${!task.completed ? `<button class="task-action-btn" style="background: #17a2b8; color: white;" onclick="timer.setActiveTask(${task.id})">Work</button>` : ''}
+                        <button class="task-action-btn btn-edit" onclick="timer.openTaskModal(${task.id})">Edit</button>
+                        <button class="task-action-btn btn-delete" onclick="timer.deleteTask(${task.id})">Delete</button>
+                    </div>
+                `;
+                
+                return taskDiv;
+            }
+
+            // Statistics and Analytics
+            updateStats() {
+                this.calculateProductivityScore();
+                
+                this.completedSessionsEl.textContent = this.stats.completedSessions;
+                this.completedTasksEl.textContent = this.stats.completedTasks;
+                this.totalFocusTimeEl.textContent = this.stats.totalFocusTime;
+                this.currentStreakEl.textContent = this.stats.currentStreak;
+                this.productivityScoreEl.textContent = this.stats.productivityScore;
+            }
+
+            calculateProductivityScore() {
+                const completedTasks = this.stats.completedTasks;
+                const totalSessions = this.stats.completedSessions;
+                const focusTime = this.stats.totalFocusTime;
+                
+                // Calculate score based on multiple factors
+                let score = 0;
+                
+                // Task completion rate (40% of score)
+                if (totalSessions > 0) {
+                    score += (completedTasks / Math.max(1, totalSessions)) * 40;
+                }
+                
+                // Focus time consistency (30% of score)
+                score += Math.min(focusTime / 100, 1) * 30;
+                
+                // Current streak bonus (20% of score)
+                score += Math.min(this.stats.currentStreak / 10, 1) * 20;
+                
+                // Session completion rate (10% of score)
+                score += Math.min(totalSessions / 10, 1) * 10;
+                
+                this.stats.productivityScore = Math.round(score);
+            }
+
+            // Utility Methods
+            showNotification(message, type = 'info') {
+                // Remove existing notifications
+                const existingNotifications = document.querySelectorAll('.notification');
+                existingNotifications.forEach(n => n.remove());
+                
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                // Show notification
+                setTimeout(() => {
+                    notification.classList.add('show');
+                }, 100);
+                
+                // Hide notification after 3 seconds
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 300);
+                }, 3000);
+            }
+
+            playNotificationSound() {
+                // Create audio context for notification sound
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = 800;
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.5);
+                } catch (e) {
+                    console.log('Audio notification not supported');
+                }
+            }
+
+            toggleTheme() {
+                this.settings.darkTheme = !this.settings.darkTheme;
+                
+                if (this.settings.darkTheme) {
+                    document.body.classList.add('dark-theme');
+                    this.themeToggle.textContent = '☀️';
+                } else {
+                    document.body.classList.remove('dark-theme');
+                    this.themeToggle.textContent = '🌙';
+                }
+            }
+
+            // Data Export/Import (for future enhancement)
+            exportData() {
+                const data = {
+                    tasks: this.tasks,
+                    stats: this.stats,
+                    settings: this.settings
+                };
+                
+                const dataStr = JSON.stringify(data, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = `pomodoro-data-${new Date().toISOString().split('T')[0]}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            }
+
+            // Keyboard shortcuts
+            setupKeyboardShortcuts() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        switch (e.key) {
+                            case ' ':
+                                e.preventDefault();
+                                if (this.isRunning) {
+                                    this.pauseTimer();
+                                } else {
+                                    this.startTimer();
+                                }
+                                break;
+                            case 'r':
+                                e.preventDefault();
+                                this.resetTimer();
+                                break;
+                            case 'n':
+                                e.preventDefault();
+                                this.openTaskModal();
+                                break;
+                            case 's':
+                                e.preventDefault();
+                                this.skipSession();
+                                break;
+                        }
+                    }
+                });
+            }
+        }
+
+        // Initialize the application
+        const timer = new PomodoroTimer();
+        timer.setupKeyboardShortcuts();
+
+        // Add some helpful tooltips
+        document.addEventListener('DOMContentLoaded', () => {
+            const tooltips = [
+                { element: '#startBtn', text: 'Start/Pause timer (Ctrl+Space)' },
+                { element: '#resetBtn', text: 'Reset current session (Ctrl+R)' },
+                { element: '#skipBtn', text: 'Skip to next session (Ctrl+S)' },
+                { element: '#addTaskBtn', text: 'Add new task (Ctrl+N)' },
+                { element: '#themeToggle', text: 'Toggle dark/light theme' }
+            ];
+            
+            tooltips.forEach(({ element, text }) => {
+                const el = document.querySelector(element);
+                if (el) {
+                    el.title = text;
+                }
+            });
+        });
+
+        // Add context menu for advanced features
+        document.addEventListener('contextmenu', (e) => {
+            if (e.target.closest('.task-item')) {
+                e.preventDefault();
+                // Could add context menu for task actions
+            }
+        });
+
+        // Add drag and drop for task reordering (future enhancement)
+        let draggedTask = null;
+
+        // Performance optimization: Use requestAnimationFrame for smooth updates
+        function smoothUpdate() {
+            if (timer.isRunning) {
+                // Smooth progress circle animation
+                requestAnimationFrame(smoothUpdate);
+            }
+        }
+
+        // Add PWA support indicators
+        if ('serviceWorker' in navigator) {
+            console.log('Service Worker support detected - PWA ready');
+        }
+
+        // Add notification permission request
+        if ('Notification' in window) {
+            if (Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+    </script>
+</body>
+</html>
