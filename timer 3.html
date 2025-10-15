@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Pro - Task Management Timer</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #0078d4;
+            --secondary-color: #106ebe;
+            --accent-color: #00bcf2;
+            --success-color: #107c10;
+            --warning-color: #ff8c00;
+            --error-color: #d13438;
+            --bg-color: #f3f2f1;
+            --surface-color: #ffffff;
+            --text-primary: #323130;
+            --text-secondary: #605e5c;
+            --border-color: #edebe9;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-color) 0%, #e1dfdd 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            min-height: 100vh;
+        }
+
+        .main-panel {
+            background: var(--surface-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow-elevated);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+        }
+
+        .timer-display {
+            font-size: 4rem;
+            font-weight: 300;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-variant-numeric: tabular-nums;
+            text-align: center;
+            letter-spacing: 0.1em;
+        }
+
+        .timer-label {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .progress-circle {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 20px 0;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .progress-ring-circle {
+            stroke: var(--border-color);
+            stroke-width: 8;
+            fill: transparent;
+            r: 90;
+            cx: 100;
+            cy: 100;
+        }
+
+        .progress-ring-progress {
+            stroke: var(--primary-color);
+            stroke-width: 8;
+            fill: transparent;
+            r: 90;
+            cx: 100;
+            cy: 100;
+            stroke-dasharray: 565.48;
+            stroke-dashoffset: 565.48;
+            transition: stroke-dashoffset 0.3s ease;
+            stroke-linecap: round;
+        }
+
+        .progress-ring-progress.work {
+            stroke: var(--primary-color);
+        }
+
+        .progress-ring-progress.break {
+            stroke: var(--success-color);
+        }
+
+        .progress-ring-progress.long-break {
+            stroke: var(--warning-color);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-color);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b02a2f;
+            transform: translateY(-2px);
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel-card {
+            background: var(--surface-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .panel-card h3 {
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 16px;
+            background: var(--bg-color);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .settings-group {
+            margin-bottom: 20px;
+        }
+
+        .settings-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="number"], input[type="text"] {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        input[type="number"]:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .task-input {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .task-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: var(--bg-color);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .task-item:hover {
+            background: #e8e6e4;
+            transform: translateX(4px);
+        }
+
+        .task-item.completed {
+            opacity: 0.7;
+            text-decoration: line-through;
+        }
+
+        .task-item.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .task-checkbox {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: 0.95rem;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .task-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .task-btn.active {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .task-btn.delete {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .task-btn:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.success {
+            background: var(--success-color);
+        }
+
+        .notification.info {
+            background: var(--primary-color);
+        }
+
+        .notification.warning {
+            background: var(--warning-color);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .session-history {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .session-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--bg-color);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+
+        .session-type {
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+
+        .session-duration {
+            color: var(--text-secondary);
+        }
+
+        .export-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .current-task-display {
+            background: var(--accent-color);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .main-panel {
+                padding: 20px;
+            }
+
+            .timer-display {
+                font-size: 3rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-panel">
+            <div class="timer-label" id="timerLabel">FOCUS TIME</div>
+            <div class="timer-display" id="timerDisplay">25:00</div>
+            
+            <div class="progress-circle">
+                <svg class="progress-ring" width="200" height="200">
+                    <circle class="progress-ring-circle"></circle>
+                    <circle class="progress-ring-progress work" id="progressCircle"></circle>
+                </svg>
+            </div>
+
+            <div class="current-task-display" id="currentTaskDisplay" style="display: none;">
+                <i class="fas fa-tasks"></i> Current Task: <span id="currentTaskText"></span>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-primary" id="startBtn">
+                    <i class="fas fa-play"></i> Start
+                </button>
+                <button class="btn btn-secondary" id="pauseBtn" disabled>
+                    <i class="fas fa-pause"></i> Pause
+                </button>
+                <button class="btn btn-danger" id="resetBtn">
+                    <i class="fas fa-stop"></i> Reset
+                </button>
+            </div>
+        </div>
+
+        <div class="side-panel">
+            <div class="panel-card">
+                <h3><i class="fas fa-chart-bar"></i> Session Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value" id="completedPomodoros">0</span>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalMinutes">0</span>
+                        <div class="stat-label">Total Minutes</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="currentStreak">0</span>
+                        <div class="stat-label">Current Streak</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="completedTasks">0</span>
+                        <div class="stat-label">Tasks Done</div>
+                    </div>
+                </div>
+                
+                <div class="session-history" id="sessionHistory">
+                    <h4 style="margin-bottom: 10px; color: var(--text-secondary); font-size: 0.9rem;">Recent Sessions</h4>
+                    <div id="sessionList"></div>
+                </div>
+
+                <div class="export-section">
+                    <div class="export-buttons">
+                        <button class="btn btn-secondary btn-small" id="exportBtn">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                        <button class="btn btn-secondary btn-small" id="importBtn">
+                            <i class="fas fa-upload"></i> Import
+                        </button>
+                        <input type="file" id="importFile" accept=".json" style="display: none;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <h3><i class="fas fa-cog"></i> Timer Settings</h3>
+                <div class="settings-group">
+                    <label for="workDuration">Work Duration (minutes)</label>
+                    <input type="number" id="workDuration" min="1" max="60" value="25">
+                </div>
+                <div class="settings-group">
+                    <label for="shortBreak">Short Break (minutes)</label>
+                    <input type="number" id="shortBreak" min="1" max="30" value="5">
+                </div>
+                <div class="settings-group">
+                    <label for="longBreak">Long Break (minutes)</label>
+                    <input type="number" id="longBreak" min="1" max="60" value="15">
+                </div>
+                <div class="settings-group">
+                    <label for="longBreakInterval">Long Break Interval</label>
+                    <input type="number" id="longBreakInterval" min="2" max="10" value="4">
+                </div>
+                <div class="settings-group">
+                    <label>
+                        <input type="checkbox" id="autoStart" style="margin-right: 8px;">
+                        Auto-start next session
+                    </label>
+                </div>
+                <div class="settings-group">
+                    <label>
+                        <input type="checkbox" id="soundEnabled" checked style="margin-right: 8px;">
+                        Enable sound notifications
+                    </label>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <h3><i class="fas fa-tasks"></i> Task Management</h3>
+                <div class="task-input">
+                    <input type="text" id="taskInput" placeholder="Add a new task...">
+                    <button class="btn btn-primary btn-small" id="addTaskBtn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="task-list" id="taskList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class PomodoroTimer {
+            constructor() {
+                this.initializeState();
+                this.initializeElements();
+                this.initializeEventListeners();
+                this.initializeAudio();
+                this.loadSettings();
+                this.renderTasks();
+                this.updateDisplay();
+                this.updateStatistics();
+            }
+
+            initializeState() {
+                this.isRunning = false;
+                this.currentTime = 25 * 60; // 25 minutes in seconds
+                this.currentSession = 'work'; // 'work', 'shortBreak', 'longBreak'
+                this.completedPomodoros = 0;
+                this.totalMinutes = 0;
+                this.currentStreak = 0;
+                this.completedTasks = 0;
+                this.interval = null;
+                this.sessionHistory = [];
+                this.tasks = [];
+                this.activeTaskId = null;
+                this.sessionStartTime = null;
+                
+                // Settings
+                this.settings = {
+                    workDuration: 25,
+                    shortBreak: 5,
+                    longBreak: 15,
+                    longBreakInterval: 4,
+                    autoStart: false,
+                    soundEnabled: true
+                };
+            }
+
+            initializeElements() {
+                this.timerDisplay = document.getElementById('timerDisplay');
+                this.timerLabel = document.getElementById('timerLabel');
+                this.progressCircle = document.getElementById('progressCircle');
+                this.startBtn = document.getElementById('startBtn');
+                this.pauseBtn = document.getElementById('pauseBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.currentTaskDisplay = document.getElementById('currentTaskDisplay');
+                this.currentTaskText = document.getElementById('currentTaskText');
+                
+                // Statistics elements
+                this.completedPomodorosEl = document.getElementById('completedPomodoros');
+                this.totalMinutesEl = document.getElementById('totalMinutes');
+                this.currentStreakEl = document.getElementById('currentStreak');
+                this.completedTasksEl = document.getElementById('completedTasks');
+                this.sessionList = document.getElementById('sessionList');
+                
+                // Settings elements
+                this.workDurationEl = document.getElementById('workDuration');
+                this.shortBreakEl = document.getElementById('shortBreak');
+                this.longBreakEl = document.getElementById('longBreak');
+                this.longBreakIntervalEl = document.getElementById('longBreakInterval');
+                this.autoStartEl = document.getElementById('autoStart');
+                this.soundEnabledEl = document.getElementById('soundEnabled');
+                
+                // Task elements
+                this.taskInput = document.getElementById('taskInput');
+                this.addTaskBtn = document.getElementById('addTaskBtn');
+                this.taskList = document.getElementById('taskList');
+                
+                // Export/Import elements
+                this.exportBtn = document.getElementById('exportBtn');
+                this.importBtn = document.getElementById('importBtn');
+                this.importFile = document.getElementById('importFile');
+            }
+
+            initializeEventListeners() {
+                this.startBtn.addEventListener('click', () => this.startTimer());
+                this.pauseBtn.addEventListener('click', () => this.pauseTimer());
+                this.resetBtn.addEventListener('click', () => this.resetTimer());
+                
+                // Settings listeners
+                this.workDurationEl.addEventListener('change', () => this.updateSettings());
+                this.shortBreakEl.addEventListener('change', () => this.updateSettings());
+                this.longBreakEl.addEventListener('change', () => this.updateSettings());
+                this.longBreakIntervalEl.addEventListener('change', () => this.updateSettings());
+                this.autoStartEl.addEventListener('change', () => this.updateSettings());
+                this.soundEnabledEl.addEventListener('change', () => this.updateSettings());
+                
+                // Task listeners
+                this.addTaskBtn.addEventListener('click', () => this.addTask());
+                this.taskInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addTask();
+                });
+                
+                // Export/Import listeners
+                this.exportBtn.addEventListener('click', () => this.exportData());
+                this.importBtn.addEventListener('click', () => this.importFile.click());
+                this.importFile.addEventListener('change', (e) => this.importData(e));
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.tagName === 'INPUT') return;
+                    
+                    switch(e.key) {
+                        case ' ':
+                            e.preventDefault();
+                            this.isRunning ? this.pauseTimer() : this.startTimer();
+                            break;
+                        case 'r':
+                            e.preventDefault();
+                            this.resetTimer();
+                            break;
+                    }
+                });
+            }
+
+            initializeAudio() {
+                // Create audio context for notifications
+                this.audioContext = null;
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.warn('Audio context not supported');
+                }
+            }
+
+            playNotificationSound() {
+                if (!this.settings.soundEnabled || !this.audioContext) return;
+                
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(600, this.audioContext.currentTime + 0.1);
+                oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime + 0.2);
+                
+                gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + 0.3);
+            }
+
+            startTimer() {
+                if (this.audioContext && this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
+                
+                this.isRunning = true;
+                this.sessionStartTime = Date.now();
+                this.startBtn.disabled = true;
+                this.pauseBtn.disabled = false;
+                
+                this.interval = setInterval(() => {
+                    this.currentTime--;
+                    this.updateDisplay();
+                    
+                    if (this.currentTime <= 0) {
+                        this.completeSession();
+                    }
+                }, 1000);
+            }
+
+            pauseTimer() {
+                this.isRunning = false;
+                this.startBtn.disabled = false;
+                this.pauseBtn.disabled = true;
+                clearInterval(this.interval);
+            }
+
+            resetTimer() {
+                this.isRunning = false;
+                this.startBtn.disabled = false;
+                this.pauseBtn.disabled = true;
+                clearInterval(this.interval);
+                
+                this.currentTime = this.settings.workDuration * 60;
+                this.currentSession = 'work';
+                this.updateDisplay();
+                this.updateSessionType();
+            }
+
+            completeSession() {
+                this.pauseTimer();
+                this.playNotificationSound();
+                
+                // Record session
+                const sessionDuration = this.getCurrentSessionDuration();
+                this.recordSession(this.currentSession, sessionDuration);
+                
+                if (this.currentSession === 'work') {
+                    this.completedPomodoros++;
+                    this.totalMinutes += sessionDuration;
+                    this.currentStreak++;
+                    
+                    // Mark active task as completed if it exists
+                    if (this.activeTaskId) {
+                        const task = this.tasks.find(t => t.id === this.activeTaskId);
+                        if (task && !task.completed) {
+                            task.completed = true;
+                            task.completedAt = new Date().toISOString();
+                            this.completedTasks++;
+                            this.renderTasks();
+                        }
+                    }
+                    
+                    // Determine next session type
+                    if (this.completedPomodoros % this.settings.longBreakInterval === 0) {
+                        this.currentSession = 'longBreak';
+                        this.currentTime = this.settings.longBreak * 60;
+                    } else {
+                        this.currentSession = 'shortBreak';
+                        this.currentTime = this.settings.shortBreak * 60;
+                    }
+                    
+                    this.showNotification('Work session completed! Time for a break.', 'success');
+                } else {
+                    this.currentSession = 'work';
+                    this.currentTime = this.settings.workDuration * 60;
+                    this.showNotification('Break time over! Ready to focus?', 'info');
+                }
+                
+                this.updateDisplay();
+                this.updateSessionType();
+                this.updateStatistics();
+                
+                if (this.settings.autoStart) {
+                    setTimeout(() => this.startTimer(), 1000);
+                }
+            }
+
+            getCurrentSessionDuration() {
+                switch(this.currentSession) {
+                    case 'work': return this.settings.workDuration;
+                    case 'shortBreak': return this.settings.shortBreak;
+                    case 'longBreak': return this.settings.longBreak;
+                    default: return 0;
+                }
+            }
+
+            recordSession(type, duration) {
+                const session = {
+                    type: type,
+                    duration: duration,
+                    completedAt: new Date().toISOString(),
+                    taskId: this.activeTaskId
+                };
+                
+                this.sessionHistory.unshift(session);
+                if (this.sessionHistory.length > 10) {
+                    this.sessionHistory = this.sessionHistory.slice(0, 10);
+                }
+                
+                this.updateSessionHistoryDisplay();
+            }
+
+            updateSessionHistoryDisplay() {
+                const historyHtml = this.sessionHistory.map(session => `
+                    <div class="session-item">
+                        <span class="session-type">${this.formatSessionType(session.type)}</span>
+                        <span class="session-duration">${session.duration}min</span>
+                    </div>
+                `).join('');
+                
+                this.sessionList.innerHTML = historyHtml;
+            }
+
+            formatSessionType(type) {
+                switch(type) {
+                    case 'work': return 'Work';
+                    case 'shortBreak': return 'Short Break';
+                    case 'longBreak': return 'Long Break';
+                    default: return type;
+                }
+            }
+
+            updateDisplay() {
+                const minutes = Math.floor(this.currentTime / 60);
+                const seconds = this.currentTime % 60;
+                this.timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Update progress circle
+                const totalTime = this.getCurrentSessionDuration() * 60;
+                const progress = (totalTime - this.currentTime) / totalTime;
+                const circumference = 2 * Math.PI * 90;
+                const offset = circumference - (progress * circumference);
+                
+                this.progressCircle.style.strokeDashoffset = offset;
+                
+                // Update document title
+                document.title = `${this.timerDisplay.textContent} - ${this.formatSessionType(this.currentSession)} - Pomodoro Pro`;
+            }
+
+            updateSessionType() {
+                const labels = {
+                    work: 'FOCUS TIME',
+                    shortBreak: 'SHORT BREAK',
+                    longBreak: 'LONG BREAK'
+                };
+                
+                this.timerLabel.textContent = labels[this.currentSession];
+                this.progressCircle.className = `progress-ring-progress ${this.currentSession === 'work' ? 'work' : this.currentSession === 'shortBreak' ? 'break' : 'long-break'}`;
+            }
+
+            updateSettings() {
+                this.settings.workDuration = parseInt(this.workDurationEl.value);
+                this.settings.shortBreak = parseInt(this.shortBreakEl.value);
+                this.settings.longBreak = parseInt(this.longBreakEl.value);
+                this.settings.longBreakInterval = parseInt(this.longBreakIntervalEl.value);
+                this.settings.autoStart = this.autoStartEl.checked;
+                this.settings.soundEnabled = this.soundEnabledEl.checked;
+                
+                // Reset timer if not running
+                if (!this.isRunning) {
+                    this.currentTime = this.settings.workDuration * 60;
+                    this.updateDisplay();
+                }
+            }
+
+            loadSettings() {
+                this.workDurationEl.value = this.settings.workDuration;
+                this.shortBreakEl.value = this.settings.shortBreak;
+                this.longBreakEl.value = this.settings.longBreak;
+                this.longBreakIntervalEl.value = this.settings.longBreakInterval;
+                this.autoStartEl.checked = this.settings.autoStart;
+                this.soundEnabledEl.checked = this.settings.soundEnabled;
+            }
+
+            // Task Management Methods
+            addTask() {
+                const taskText = this.taskInput.value.trim();
+                if (!taskText) return;
+                
+                const task = {
+                    id: Date.now().toString(),
+                    text: taskText,
+                    completed: false,
+                    createdAt: new Date().toISOString(),
+                    completedAt: null,
+                    pomodorosSpent: 0
+                };
+                
+                this.tasks.push(task);
+                this.taskInput.value = '';
+                this.renderTasks();
+                this.showNotification('Task added successfully!', 'success');
+            }
+
+            deleteTask(taskId) {
+                this.tasks = this.tasks.filter(task => task.id !== taskId);
+                if (this.activeTaskId === taskId) {
+                    this.activeTaskId = null;
+                    this.updateCurrentTaskDisplay();
+                }
+                this.renderTasks();
+                this.showNotification('Task deleted!', 'info');
+            }
+
+            toggleTask(taskId) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.completed = !task.completed;
+                    task.completedAt = task.completed ? new Date().toISOString() : null;
+                    if (task.completed) {
+                        this.completedTasks++;
+                        this.showNotification('Task completed!', 'success');
+                    } else {
+                        this.completedTasks--;
+                    }
+                    this.renderTasks();
+                    this.updateStatistics();
+                }
+            }
+
+            setActiveTask(taskId) {
+                this.activeTaskId = taskId;
+                this.updateCurrentTaskDisplay();
+                this.renderTasks();
+                this.showNotification('Task activated for current session!', 'info');
+            }
+
+            updateCurrentTaskDisplay() {
+                if (this.activeTaskId) {
+                    const task = this.tasks.find(t => t.id === this.activeTaskId);
+                    if (task) {
+                        this.currentTaskText.textContent = task.text;
+                        this.currentTaskDisplay.style.display = 'block';
+                    } else {
+                        this.currentTaskDisplay.style.display = 'none';
+                    }
+                } else {
+                    this.currentTaskDisplay.style.display = 'none';
+                }
+            }
+
+            renderTasks() {
+                const tasksHtml = this.tasks.map(task => `
+                    <div class="task-item ${task.completed ? 'completed' : ''} ${task.id === this.activeTaskId ? 'active' : ''}">
+                        <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
+                               onchange="timer.toggleTask('${task.id}')">
+                        <span class="task-text">${task.text}</span>
+                        <div class="task-actions">
+                            ${!task.completed ? `<button class="task-btn ${task.id === this.activeTaskId ? 'active' : ''}" 
+                                onclick="timer.setActiveTask('${task.id}')" title="Set as active task">
+                                <i class="fas fa-play"></i>
+                            </button>` : ''}
+                            <button class="task-btn delete" onclick="timer.deleteTask('${task.id}')" title="Delete task">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                this.taskList.innerHTML = tasksHtml;
+                this.updateCurrentTaskDisplay();
+            }
+
+            updateStatistics() {
+                this.completedPomodorosEl.textContent = this.completedPomodoros;
+                this.totalMinutesEl.textContent = this.totalMinutes;
+                this.currentStreakEl.textContent = this.currentStreak;
+                this.completedTasksEl.textContent = this.completedTasks;
+            }
+
+            // Data Export/Import Methods
+            exportData() {
+                const data = {
+                    statistics: {
+                        completedPomodoros: this.completedPomodoros,
+                        totalMinutes: this.totalMinutes,
+                        currentStreak: this.currentStreak,
+                        completedTasks: this.completedTasks
+                    },
+                    sessionHistory: this.sessionHistory,
+                    tasks: this.tasks,
+                    settings: this.settings,
+                    exportDate: new Date().toISOString()
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `pomodoro-data-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                this.showNotification('Data exported successfully!', 'success');
+            }
+
+            importData(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        // Validate data structure
+                        if (!data.statistics || !data.sessionHistory || !data.tasks || !data.settings) {
+                            throw new Error('Invalid data format');
+                        }
+                        
+                        // Import data
+                        this.completedPomodoros = data.statistics.completedPomodoros || 0;
+                        this.totalMinutes = data.statistics.totalMinutes || 0;
+                        this.currentStreak = data.statistics.currentStreak || 0;
+                        this.completedTasks = data.statistics.completedTasks || 0;
+                        
+                        this.sessionHistory = data.sessionHistory || [];
+                        this.tasks = data.tasks || [];
+                        this.settings = { ...this.settings, ...data.settings };
+                        
+                        // Update UI
+                        this.loadSettings();
+                        this.renderTasks();
+                        this.updateStatistics();
+                        this.updateSessionHistoryDisplay();
+                        
+                        this.showNotification('Data imported successfully!', 'success');
+                    } catch (error) {
+                        this.showNotification('Error importing data: ' + error.message, 'warning');
+                    }
+                };
+                reader.readAsText(file);
+                
+                // Reset file input
+                event.target.value = '';
+            }
+
+            // Notification System
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.innerHTML = `
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                    ${message}
+                `;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+
+            // Utility Methods
+            formatTime(minutes) {
+                const hours = Math.floor(minutes / 60);
+                const remainingMinutes = minutes % 60;
+                return hours > 0 ? `${hours}h ${remainingMinutes}m` : `${remainingMinutes}m`;
+            }
+
+            // Advanced Features
+            generateProductivityReport() {
+                const today = new Date().toDateString();
+                const todaySessions = this.sessionHistory.filter(session => 
+                    new Date(session.completedAt).toDateString() === today
+                );
+                
+                const workSessions = todaySessions.filter(s => s.type === 'work');
+                const totalWorkTime = workSessions.reduce((sum, s) => sum + s.duration, 0);
+                
+                return {
+                    date: today,
+                    workSessions: workSessions.length,
+                    totalWorkTime: totalWorkTime,
+                    completedTasks: this.tasks.filter(t => t.completed && 
+                        new Date(t.completedAt).toDateString() === today).length,
+                    productivity: workSessions.length > 0 ? (totalWorkTime / workSessions.length) : 0
+                };
+            }
+
+            // Initialize keyboard shortcuts help
+            showKeyboardShortcuts() {
+                const shortcuts = `
+                    <div style="background: var(--surface-color); padding: 20px; border-radius: 8px; margin: 10px 0;">
+                        <h4>Keyboard Shortcuts</h4>
+                        <ul style="list-style: none; padding: 0;">
+                            <li><strong>Space</strong> - Start/Pause timer</li>
+                            <li><strong>R</strong> - Reset timer</li>
+                            <li><strong>Enter</strong> - Add task (when input is focused)</li>
+                        </ul>
+                    </div>
+                `;
+                return shortcuts;
+            }
+        }
+
+        // Initialize the application
+        const timer = new PomodoroTimer();
+
+        // Add some sample tasks for demonstration
+        setTimeout(() => {
+            timer.tasks = [
+                {
+                    id: '1',
+                    text: 'Complete project documentation',
+                    completed: false,
+                    createdAt: new Date().toISOString(),
+                    completedAt: null,
+                    pomodorosSpent: 0
+                },
+                {
+                    id: '2',
+                    text: 'Review code submissions',
+                    completed: false,
+                    createdAt: new Date().toISOString(),
+                    completedAt: null,
+                    pomodorosSpent: 0
+                },
+                {
+                    id: '3',
+                    text: 'Prepare presentation slides',
+                    completed: true,
+                    createdAt: new Date().toISOString(),
+                    completedAt: new Date().toISOString(),
+                    pomodorosSpent: 2
+                }
+            ];
+            timer.renderTasks();
+        }, 100);
+
+        // Service Worker registration for PWA capabilities (if running in a PWA context)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // This would be implemented in a full production environment
+                console.log('Service Worker ready for PWA implementation');
+            });
+        }
+
+        // Add focus management for accessibility
+        document.addEventListener('DOMContentLoaded', () => {
+            // Ensure proper focus management
+            const focusableElements = document.querySelectorAll('button, input, [tabindex]');
+            focusableElements.forEach(el => {
+                el.addEventListener('focus', (e) => {
+                    e.target.style.outline = '2px solid var(--primary-color)';
+                });
+                el.addEventListener('blur', (e) => {
+                    e.target.style.outline = 'none';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
