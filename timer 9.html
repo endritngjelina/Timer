@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusFlow Pro - Advanced Pomodoro Suite</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --dark-gradient: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --shadow-light: 0 8px 32px rgba(0, 0, 0, 0.1);
+            --shadow-heavy: 0 20px 60px rgba(0, 0, 0, 0.15);
+            --border-radius: 20px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --focus-color: #667eea;
+            --break-color: #43e97b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            transition: background 0.5s ease;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #2c3e50 0%, #1a1a2e 50%, #16213e 100%);
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 400px 350px;
+            gap: 25px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-light);
+            transition: var(--transition);
+        }
+
+        .glass-panel:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-heavy);
+        }
+
+        /* Main Timer Section */
+        .timer-section {
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .timer-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .app-header {
+            position: relative;
+            z-index: 2;
+            margin-bottom: 30px;
+        }
+
+        .app-logo {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, #fff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(255,255,255,0.5);
+            margin-bottom: 10px;
+        }
+
+        .app-tagline {
+            color: rgba(255,255,255,0.8);
+            font-size: 1.2rem;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .timer-display-container {
+            position: relative;
+            z-index: 2;
+            margin: 40px 0;
+        }
+
+        .timer-display {
+            font-size: 5rem;
+            font-weight: 200;
+            color: white;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+            text-shadow: 0 0 20px rgba(255,255,255,0.5);
+            margin: 20px 0;
+            transition: var(--transition);
+        }
+
+        .timer-display.warning {
+            color: #ff6b6b;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .session-indicator {
+            display: inline-block;
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 25px;
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            transition: var(--transition);
+        }
+
+        .session-indicator.break {
+            background: rgba(67, 233, 123, 0.3);
+        }
+
+        .progress-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto 30px;
+        }
+
+        .progress-ring {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .progress-track {
+            fill: none;
+            stroke: rgba(255,255,255,0.1);
+            stroke-width: 8;
+        }
+
+        .progress-fill {
+            fill: none;
+            stroke: white;
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 880;
+            stroke-dashoffset: 880;
+            transition: stroke-dashoffset 0.5s ease;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
+        }
+
+        .progress-inner-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .controls {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: var(--success-gradient);
+            color: white;
+            box-shadow: 0 10px 30px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-3px);
+        }
+
+        /* Advanced Settings */
+        .advanced-settings {
+            position: relative;
+            z-index: 2;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .settings-title {
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .settings-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .setting-label {
+            color: rgba(255,255,255,0.9);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .setting-input {
+            padding: 10px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .setting-input:focus {
+            outline: none;
+            border-color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Task Management Panel */
+        .task-panel {
+            padding: 30px;
+            height: fit-content;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .panel-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .panel-icon {
+            font-size: 2rem;
+        }
+
+        .task-input-container {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .task-input {
+            width: 100%;
+            padding: 15px 50px 15px 20px;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: var(--transition);
+            background: rgba(255,255,255,0.8);
+        }
+
+        .task-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .task-add-btn {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            background: var(--primary-gradient);
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .task-add-btn:hover {
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .task-categories {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .category-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            border-radius: 20px;
+            background: white;
+            color: #667eea;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .category-btn.active,
+        .category-btn:hover {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .task-list {
+            max-height: 500px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .task-item {
+            background: rgba(255,255,255,0.8);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid transparent;
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .task-item:hover {
+            background: rgba(255,255,255,0.95);
+            transform: translateX(5px);
+            box-shadow: var(--shadow-light);
+        }
+
+        .task-item.active {
+            border-left-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            box-shadow: var(--shadow-light);
+        }
+
+        .task-item.completed {
+            opacity: 0.7;
+            background: rgba(67, 233, 123, 0.1);
+            border-left-color: #43e97b;
+        }
+
+        .task-item.high-priority {
+            border-left-color: #ff6b6b;
+        }
+
+        .task-item.medium-priority {
+            border-left-color: #ffa726;
+        }
+
+        .task-item.low-priority {
+            border-left-color: #66bb6a;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .task-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .task-title.completed {
+            text-decoration: line-through;
+        }
+
+        .task-priority {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .task-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .task-progress {
+            width: 100%;
+            height: 6px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .task-progress-fill {
+            height: 100%;
+            background: var(--primary-gradient);
+            transition: width 0.3s ease;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .task-action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .btn-complete {
+            background: var(--warning-gradient);
+            color: white;
+        }
+
+        .btn-edit {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .btn-delete {
+            background: var(--secondary-gradient);
+            color: white;
+        }
+
+        .btn-select {
+            background: var(--success-gradient);
+            color: white;
+        }
+
+        /* Analytics Panel */
+        .analytics-panel {
+            padding: 30px;
+            height: fit-content;
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--glass-bg);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--glass-border);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: scale(1.05);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .productivity-chart {
+            background: var(--glass-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .chart-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chart-container {
+            height: 200px;
+            position: relative;
+        }
+
+        .achievements {
+            background: var(--glass-bg);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .achievement-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .achievement-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            text-align: center;
+        }
+
+        .achievement-info {
+            flex: 1;
+        }
+
+        .achievement-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .achievement-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: var(--shadow-heavy);
+            transition: var(--transition);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 25px 50px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Notification System */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            max-width: 400px;
+            padding: 20px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            transform: translateX(500px);
+            transition: var(--transition);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: var(--success-gradient);
+        }
+
+        .notification.warning {
+            background: var(--warning-gradient);
+        }
+
+        .notification.error {
+            background: var(--secondary-gradient);
+        }
+
+        .notification.info {
+            background: var(--primary-gradient);
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+        }
+
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: scale(0.9);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--focus-color);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+        }
+
+        .progress-container {
+            position: relative;
+        }
+
+        .progress-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.9rem;
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Task Timer */
+        .task-timer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 5px 10px;
+            margin-top: 5px;
+            font-size: 0.9rem;
+            color: white;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template-columns: 1fr 350px;
+            }
+            
+            .analytics-panel {
+                grid-column: span 2;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 15px;
+            }
+            
+            .timer-section {
+                padding: 25px;
+            }
+            
+            .timer-display {
+                font-size: 3.5rem;
+            }
+            
+            .controls {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .btn {
+                flex: 1;
+                min-width: 120px;
+            }
+            
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Dark mode support */
+        body.dark-mode .glass-panel {
+            background: rgba(30, 30, 46, 0.4);
+        }
+
+        body.dark-mode .task-item {
+            background: rgba(30, 30, 46, 0.4);
+            color: #f0f0f0;
+        }
+
+        body.dark-mode .task-title {
+            color: #f0f0f0;
+        }
+
+        body.dark-mode .stat-card,
+        body.dark-mode .productivity-chart,
+        body.dark-mode .achievements {
+            background: rgba(30, 30, 46, 0.4);
+        }
+
+        body.dark-mode .stat-value,
+        body.dark-mode .chart-title,
+        body.dark-mode .achievement-title {
+            color: #f0f0f0;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-gradient);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-gradient);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Main Timer Section -->
+        <div class="glass-panel timer-section">
+            <div class="app-header">
+                <h1 class="app-logo">FocusFlow Pro</h1>
+                <p class="app-tagline">Advanced Productivity Suite</p>
+            </div>
+            
+            <div class="timer-display-container">
+                <div class="session-indicator" id="sessionIndicator">Work Session</div>
+                
+                <div class="progress-container">
+                    <svg class="progress-ring" viewBox="0 0 320 320">
+                        <circle class="progress-track" cx="160" cy="160" r="140"></circle>
+                        <circle class="progress-fill" id="progressFill" cx="160" cy="160" r="140"></circle>
+                    </svg>
+                    <div class="progress-inner-circle">
+                        <div class="timer-display" id="timerDisplay">25:00</div>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button class="btn btn-primary" id="startBtn" onclick="startTimer()">Start Focus</button>
+                    <button class="btn btn-secondary" id="pauseBtn" onclick="pauseTimer()">Pause</button>
+                    <button class="btn btn-secondary" onclick="resetTimer()">Reset</button>
+                    <button class="btn btn-secondary" onclick="skipSession()">Skip</button>
+                </div>
+            </div>
+            
+            <div class="advanced-settings">
+                <div class="settings-header">
+                    <h3 class="settings-title">⚙️ Advanced Settings</h3>
+                    <button class="settings-toggle" id="settingsToggle" onclick="toggleSettings()">▼</button>
+                </div>
+                <div class="settings-grid" id="settingsGrid">
+                    <div class="setting-item">
+                        <label class="setting-label">Work Duration (min)</label>
+                        <input type="number" class="setting-input" id="workDuration" value="25" min="1" max="120">
+                    </div>
+                    <div class="setting-item">
+                        <label class="setting-label">Short Break (min)</label>
+                        <input type="number" class="setting-input" id="shortBreak" value="5" min="1" max="30">
+                    </div>
+                    <div class="setting-item">
+                        <label class="setting-label">Long Break (min)</label>
+                        <input type="number" class="setting-input" id="longBreak" value="15" min="1" max="60">
+                    </div>
+                    <div class="setting-item">
+                        <label class="setting-label">Sessions to Long Break</label>
+                        <input type="number" class="setting-input" id="sessionsToLongBreak" value="4" min="2" max="10">
+                    </div>
+                    <div class="setting-item">
+                        <label class="setting-label">Auto-start Breaks</label>
+                        <input type="checkbox" class="setting-input" id="autoStartBreaks" checked>
+                    </div>
+                    <div class="setting-item">
+                        <label class="setting-label">Sound Notifications</label>
+                        <input type="checkbox" class="setting-input" id="soundNotifications" checked>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Task Management Panel -->
+        <div class="glass-panel task-panel">
+            <div class="panel-header">
+                <span class="panel-icon">📋</span>
+                <h2 class="panel-title">Smart Tasks</h2>
+            </div>
+            
+            <div class="task-input-container">
+                <input type="text" class="task-input" id="taskInput" placeholder="What needs to be done?" onkeypress="if(event.key==='Enter') addTask()">
+                <button class="task-add-btn" onclick="addTask()">+</button>
+            </div>
+            
+            <div class="task-categories">
+                <button class="category-btn active" data-category="all" onclick="filterTasks('all')">All</button>
+                <button class="category-btn" data-category="work" onclick="filterTasks('work')">Work</button>
+                <button class="category-btn" data-category="personal" onclick="filterTasks('personal')">Personal</button>
+                <button class="category-btn" data-category="urgent" onclick="filterTasks('urgent')">Urgent</button>
+            </div>
+            
+            <div class="task-list" id="taskList">
+                <!-- Tasks will be populated here -->
+            </div>
+            
+            <div class="task-actions">
+                <button class="btn btn-secondary" onclick="clearCompletedTasks()">Clear Completed</button>
+                <button class="btn btn-primary" onclick="showTaskModal()">Bulk Edit</button>
+            </div>
+        </div>
+        
+        <!-- Analytics Panel -->
+        <div class="glass-panel analytics-panel">
+            <div class="panel-header">
+                <span class="panel-icon">📊</span>
+                <h2 class="panel-title">Analytics</h2>
+            </div>
+            
+            <div class="analytics-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="todayFocus">42m</div>
+                    <div class="stat-label">Today's Focus</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="weeklyAvg">3h 15m</div>
+                    <div class="stat-label">Weekly Average</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="completionRate">78%</div>
+                    <div class="stat-label">Completion Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="currentStreak">7</div>
+                    <div class="stat-label">Current Streak</div>
+                </div>
+            </div>
+            
+            <div class="productivity-chart">
+                <div class="chart-header">
+                    <h3 class="chart-title">7-Day Productivity</h3>
+                    <select id="chartPeriod" onchange="updateChart()">
+                        <option value="7">Last 7 Days</option>
+                        <option value="30">Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                    </select>
+                </div>
+                <div class="chart-container">
+                    <canvas id="productivityChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="achievements">
+                <h3 class="chart-title">🏆 Achievements</h3>
+                <div id="achievementsList">
+                    <!-- Achievements will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Floating Action Button -->
+    <button class="fab" id="darkModeToggle" onclick="toggleDarkMode()">🌙</button>
+    
+    <!-- Notification Container -->
+    <div class="notification" id="notification">
+        <i class="fas fa-info-circle"></i>
+        <span id="notificationText">Welcome to FocusFlow Pro!</span>
+    </div>
+    
+    <!-- Task Modal -->
+    <div class="modal" id="taskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Task</h3>
+                <button class="modal-close" onclick="closeTaskModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Task Title</label>
+                    <input type="text" class="form-input" id="editTaskTitle">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" id="editTaskCategory">
+                        <option value="work">Work</option>
+                        <option value="personal">Personal</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <select class="form-select" id="editTaskPriority">
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Progress</label>
+                    <div class="progress-container">
+                        <div class="task-progress">
+                            <div class="task-progress-fill" id="editTaskProgressFill" style="width: 0%"></div>
+                        </div>
+                        <div class="progress-label" id="editTaskProgressLabel">0%</div>
+                    </div>
+                    <input type="range" class="form-input" id="editTaskProgress" min="0" max="100" value="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeTaskModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTask()">Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Audio elements for sounds -->
+    <audio id="timerEndSound" src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3"></audio>
+    <audio id="notificationSound" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio>
+
+    <script>
+        // Global variables
+        let timerInterval;
+        let isRunning = false;
+        let isBreak = false;
+        let totalSeconds = 25 * 60;
+        let currentSeconds = totalSeconds;
+        let sessionCount = 0;
+        let currentTaskId = null;
+        let tasks = [];
+        let darkMode = false;
+        let achievements = [];
+        let productivityData = [];
+        let selectedTaskId = null;
+        
+        // DOM Elements
+        const timerDisplay = document.getElementById('timerDisplay');
+        const sessionIndicator = document.getElementById('sessionIndicator');
+        const progressFill = document.getElementById('progressFill');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const taskList = document.getElementById('taskList');
+        const taskInput = document.getElementById('taskInput');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notificationText');
+        const taskModal = document.getElementById('taskModal');
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const timerEndSound = document.getElementById('timerEndSound');
+        const notificationSound = document.getElementById('notificationSound');
+        const settingsToggle = document.getElementById('settingsToggle');
+        const settingsGrid = document.getElementById('settingsGrid');
+        const productivityChart = document.getElementById('productivityChart');
+        const achievementsList = document.getElementById('achievementsList');
+        const todayFocus = document.getElementById('todayFocus');
+        const weeklyAvg = document.getElementById('weeklyAvg');
+        const completionRate = document.getElementById('completionRate');
+        const currentStreak = document.getElementById('currentStreak');
+        
+        // Initialize the app
+        function init() {
+            // Initialize timer
+            updateTimerDisplay();
+            
+            // Generate sample tasks
+            generateSampleTasks();
+            
+            // Generate sample analytics
+            generateSampleAnalytics();
+            
+            // Generate sample achievements
+            generateAchievements();
+            
+            // Initialize chart
+            initChart();
+            
+            // Show welcome notification
+            showNotification('Welcome to FocusFlow Pro! Ready to boost your productivity?', 'info');
+        }
+        
+        // Timer functions
+        function startTimer() {
+            if (!isRunning) {
+                isRunning = true;
+                startBtn.textContent = isBreak ? 'Start Break' : 'Start Focus';
+                
+                timerInterval = setInterval(() => {
+                    currentSeconds--;
+                    updateTimerDisplay();
+                    
+                    if (currentSeconds <= 0) {
+                        endSession();
+                    }
+                    
+                    // Pulse animation when 60 seconds left
+                    if (currentSeconds === 60) {
+                        timerDisplay.classList.add('warning');
+                    }
+                }, 1000);
+            }
+        }
+        
+        function pauseTimer() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+                startBtn.textContent = 'Resume';
+            }
+        }
+        
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            startBtn.textContent = 'Start Focus';
+            
+            const workDuration = parseInt(document.getElementById('workDuration').value) || 25;
+            totalSeconds = workDuration * 60;
+            currentSeconds = totalSeconds;
+            isBreak = false;
+            sessionIndicator.textContent = 'Work Session';
+            sessionIndicator.classList.remove('break');
+            
+            updateTimerDisplay();
+            timerDisplay.classList.remove('warning');
+        }
+        
+        function skipSession() {
+            endSession();
+        }
+        
+        function endSession() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            timerDisplay.classList.remove('warning');
+            
+            // Play sound if enabled
+            if (document.getElementById('soundNotifications').checked) {
+                timerEndSound.play();
+            }
+            
+            // Update analytics
+            const focusTime = isBreak ? 0 : (totalSeconds - currentSeconds) / 60;
+            updateAnalytics(focusTime);
+            
+            if (isBreak) {
+                // Break ended, start work session
+                isBreak = false;
+                const workDuration = parseInt(document.getElementById('workDuration').value) || 25;
+                totalSeconds = workDuration * 60;
+                sessionIndicator.textContent = 'Work Session';
+                sessionIndicator.classList.remove('break');
+                showNotification('Break completed! Time to focus.', 'success');
+            } else {
+                // Work session ended, start break
+                isBreak = true;
+                sessionCount++;
+                
+                // Determine break type
+                const sessionsToLongBreak = parseInt(document.getElementById('sessionsToLongBreak').value) || 4;
+                const isLongBreak = sessionCount % sessionsToLongBreak === 0;
+                
+                const breakDuration = isLongBreak ? 
+                    (parseInt(document.getElementById('longBreak').value) || 15) : 
+                    (parseInt(document.getElementById('shortBreak').value) || 5);
+                
+                totalSeconds = breakDuration * 60;
+                sessionIndicator.textContent = isLongBreak ? 'Long Break' : 'Short Break';
+                sessionIndicator.classList.add('break');
+                showNotification('Great work! Time for a break.', 'success');
+                
+                // Auto-start break if enabled
+                if (document.getElementById('autoStartBreaks').checked) {
+                    startTimer();
+                }
+            }
+            
+            currentSeconds = totalSeconds;
+            updateTimerDisplay();
+            startBtn.textContent = isBreak ? 'Start Break' : 'Start Focus';
+        }
+        
+        function updateTimerDisplay() {
+            const minutes = Math.floor(currentSeconds / 60);
+            const seconds = currentSeconds % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update progress ring
+            const circumference = 880;
+            const progress = ((totalSeconds - currentSeconds) / totalSeconds) * circumference;
+            progressFill.style.strokeDashoffset = circumference - progress;
+        }
+        
+        // Task management functions
+        function addTask() {
+            const title = taskInput.value.trim();
+            if (title) {
+                const task = {
+                    id: Date.now(),
+                    title: title,
+                    category: 'work',
+                    priority: 'medium',
+                    completed: false,
+                    progress: 0,
+                    createdAt: new Date(),
+                    pomodoros: 0
+                };
+                
+                tasks.push(task);
+                renderTasks();
+                taskInput.value = '';
+                showNotification('Task added successfully!', 'success');
+            } else {
+                showNotification('Please enter a task title', 'warning');
+            }
+        }
+        
+        function deleteTask(id) {
+            tasks = tasks.filter(task => task.id !== id);
+            renderTasks();
+            showNotification('Task deleted', 'info');
+        }
+        
+        function toggleCompleteTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                renderTasks();
+                showNotification(`Task ${task.completed ? 'completed' : 'marked as incomplete'}`, 'success');
+            }
+        }
+        
+        function selectTask(id) {
+            currentTaskId = id;
+            renderTasks();
+            showNotification('Task selected for focus session', 'info');
+        }
+        
+        function clearCompletedTasks() {
+            tasks = tasks.filter(task => !task.completed);
+            renderTasks();
+            showNotification('Completed tasks cleared', 'success');
+        }
+        
+        function filterTasks(category) {
+            // Update active category button
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.category === category);
+            });
+            
+            renderTasks(category);
+        }
+        
+        function renderTasks(category = 'all') {
+            taskList.innerHTML = '';
+            
+            const filteredTasks = category === 'all' ? 
+                tasks : 
+                tasks.filter(task => task.category === category);
+            
+            filteredTasks.forEach(task => {
+                const taskEl = document.createElement('div');
+                taskEl.className = `task-item ${task.completed ? 'completed' : ''} ${task.priority}-priority`;
+                if (task.id === currentTaskId) {
+                    taskEl.classList.add('active');
+                }
+                
+                taskEl.innerHTML = `
+                    <div class="task-header">
+                        <div class="task-title ${task.completed ? 'completed' : ''}">${task.title}</div>
+                        <div class="task-priority">${task.priority}</div>
+                    </div>
+                    <div class="task-meta">
+                        <span>${formatDate(task.createdAt)}</span>
+                        <span>${task.pomodoros} 🍅</span>
+                    </div>
+                    <div class="task-progress">
+                        <div class="task-progress-fill" style="width: ${task.progress}%"></div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="task-action-btn btn-complete" onclick="toggleCompleteTask(${task.id})">
+                            <i class="fas fa-${task.completed ? 'undo' : 'check'}"></i>
+                        </button>
+                        <button class="task-action-btn btn-edit" onclick="editTask(${task.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="task-action-btn btn-delete" onclick="deleteTask(${task.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="task-action-btn btn-select" onclick="selectTask(${task.id})">
+                            <i class="fas fa-target"></i>
+                        </button>
+                    </div>
+                `;
+                
+                taskList.appendChild(taskEl);
+            });
+        }
+        
+        function editTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                selectedTaskId = id;
+                document.getElementById('editTaskTitle').value = task.title;
+                document.getElementById('editTaskCategory').value = task.category;
+                document.getElementById('editTaskPriority').value = task.priority;
+                document.getElementById('editTaskProgress').value = task.progress;
+                document.getElementById('editTaskProgressFill').style.width = `${task.progress}%`;
+                document.getElementById('editTaskProgressLabel').textContent = `${task.progress}%`;
+                
+                taskModal.classList.add('show');
+            }
+        }
+        
+        function saveTask() {
+            if (selectedTaskId !== null) {
+                const task = tasks.find(t => t.id === selectedTaskId);
+                if (task) {
+                    task.title = document.getElementById('editTaskTitle').value;
+                    task.category = document.getElementById('editTaskCategory').value;
+                    task.priority = document.getElementById('editTaskPriority').value;
+                    task.progress = parseInt(document.getElementById('editTaskProgress').value);
+                    
+                    renderTasks();
+                    closeTaskModal();
+                    showNotification('Task updated successfully', 'success');
+                }
+            }
+        }
+        
+        function closeTaskModal() {
+            taskModal.classList.remove('show');
+            selectedTaskId = null;
+        }
+        
+        function showTaskModal() {
+            if (tasks.length > 0) {
+                // For bulk edit, we'll just edit the first task as a placeholder
+                editTask(tasks[0].id);
+            } else {
+                showNotification('No tasks to edit', 'warning');
+            }
+        }
+        
+        // Notification functions
+        function showNotification(message, type) {
+            notificationText.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            // Play sound if enabled
+            if (document.getElementById('soundNotifications').checked) {
+                notificationSound.play();
+            }
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // UI functions
+        function toggleSettings() {
+            const isVisible = settingsGrid.style.display !== 'none';
+            settingsGrid.style.display = isVisible ? 'none' : 'grid';
+            settingsToggle.textContent = isVisible ? '▶' : '▼';
+        }
+        
+        function toggleDarkMode() {
+            darkMode = !darkMode;
+            document.body.classList.toggle('dark-mode', darkMode);
+            darkModeToggle.textContent = darkMode ? '☀️' : '🌙';
+            darkModeToggle.style.background = darkMode ? 'var(--dark-gradient)' : 'var(--primary-gradient)';
+            showNotification(darkMode ? 'Dark mode enabled' : 'Light mode enabled', 'info');
+        }
+        
+        // Analytics functions
+        function updateAnalytics(focusTime) {
+            // Update today's focus time
+            const todayMinutes = parseInt(todayFocus.textContent) || 0;
+            todayFocus.textContent = `${todayMinutes + Math.round(focusTime)}m`;
+            
+            // Update streak if focus time > 0
+            if (focusTime > 0) {
+                const streak = parseInt(currentStreak.textContent) || 0;
+                currentStreak.textContent = streak + 1;
+            }
+            
+            // Update chart data
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            
+            // Find today's data or create new
+            let dayData = productivityData.find(d => d.date === today);
+            if (!dayData) {
+                dayData = { date: today, focusTime: 0 };
+                productivityData.push(dayData);
+                
+                // Keep only last 90 days
+                if (productivityData.length > 90) {
+                    productivityData.shift();
+                }
+            }
+            
+            dayData.focusTime += focusTime;
+            
+            // Update chart
+            updateChart();
+        }
+        
+        function initChart() {
+            // Generate sample data for the last 7 days
+            const today = new Date();
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                
+                if (!productivityData.some(d => d.date === dateStr)) {
+                    productivityData.push({
+                        date: dateStr,
+                        focusTime: Math.floor(Math.random() * 120) // Random minutes
+                    });
+                }
+            }
+            
+            updateChart();
+        }
+        
+        function updateChart() {
+            const period = parseInt(document.getElementById('chartPeriod').value) || 7;
+            const dataToShow = productivityData.slice(-period);
+            
+            const ctx = document.getElementById('productivityChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (window.productivityChartInstance) {
+                window.productivityChartInstance.destroy();
+            }
+            
+            window.productivityChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: dataToShow.map(d => {
+                        const date = new Date(d.date);
+                        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                    }),
+                    datasets: [{
+                        label: 'Focus Time (minutes)',
+                        data: dataToShow.map(d => d.focusTime),
+                        backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: darkMode ? '#f0f0f0' : '#2c3e50'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: darkMode ? '#f0f0f0' : '#2c3e50'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                            titleFont: {
+                                size: 14
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            padding: 10,
+                            displayColors: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        function generateAchievements() {
+            achievements = [
+                {
+                    id: 1,
+                    title: "First Timer",
+                    description: "Complete your first focus session",
+                    icon: "🥇",
+                    achieved: true
+                },
+                {
+                    id: 2,
+                    title: "Consistent Performer",
+                    description: "Complete 5 focus sessions in a row",
+                    icon: "🔥",
+                    achieved: true
+                },
+                {
+                    id: 3,
+                    title: "Marathon Focus",
+                    description: "Focus for more than 2 hours in a day",
+                    icon: "🏃‍♂️",
+                    achieved: false
+                },
+                {
+                    id: 4,
+                    title: "Task Master",
+                    description: "Complete 10 tasks",
+                    icon: "✅",
+                    achieved: false
+                },
+                {
+                    id: 5,
+                    title: "Early Bird",
+                    description: "Start a focus session before 8 AM",
+                    icon: "⏰",
+                    achieved: false
+                }
+            ];
+            
+            renderAchievements();
+        }
+        
+        function renderAchievements() {
+            achievementsList.innerHTML = '';
+            
+            achievements.forEach(achievement => {
+                const achievementEl = document.createElement('div');
+                achievementEl.className = 'achievement-item';
+                achievementEl.innerHTML = `
+                    <div class="achievement-icon">${achievement.icon}</div>
+                    <div class="achievement-info">
+                        <div class="achievement-title">${achievement.title}</div>
+                        <div class="achievement-desc">${achievement.description}</div>
+                    </div>
+                    <div class="achievement-status">${achievement.achieved ? '✅' : '🔒'}</div>
+                `;
+                
+                achievementsList.appendChild(achievementEl);
+            });
+        }
+        
+        // Utility functions
+        function formatDate(date) {
+            return new Date(date).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        function generateSampleTasks() {
+            tasks = [
+                {
+                    id: 1,
+                    title: "Design homepage layout",
+                    category: "work",
+                    priority: "high",
+                    completed: false,
+                    progress: 30,
+                    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+                    pomodoros: 2
+                },
+                {
+                    id: 2,
+                    title: "Prepare presentation slides",
+                    category: "work",
+                    priority: "medium",
+                    completed: false,
+                    progress: 70,
+                    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+                    pomodoros: 1
+                },
+                {
+                    id: 3,
+                    title: "Grocery shopping",
+                    category: "personal",
+                    priority: "low",
+                    completed: true,
+                    progress: 100,
+                    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+                    pomodoros: 0
+                },
+                {
+                    id: 4,
+                    title: "Fix critical bug in login system",
+                    category: "urgent",
+                    priority: "high",
+                    completed: false,
+                    progress: 10,
+                    createdAt: new Date(),
+                    pomodoros: 0
+                }
+            ];
+            
+            renderTasks();
+        }
+        
+        function generateSampleAnalytics() {
+            todayFocus.textContent = "42m";
+            weeklyAvg.textContent = "3h 15m";
+            completionRate.textContent = "78%";
+            currentStreak.textContent = "7";
+        }
+        
+        // Initialize the app when the page loads
+        window.onload = init;
+        
+        // Initialize progress ring
+        progressFill.style.strokeDasharray = '880';
+        progressFill.style.strokeDashoffset = '880';
+    </script>
+</body>
+</html>
